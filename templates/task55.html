@@ -1,0 +1,721 @@
+{% extends "base_dashboard.html" %}
+
+{% block title %}Writing Task Attempt - Dyslexia Research Study{% endblock %}
+
+{% block content %}
+<!-- Loading State -->
+<div id="loadingState" class="flex justify-center items-center min-h-[60vh] px-4">
+    <div class="text-center">
+        <div class="animate-spin rounded-full h-10 w-10 md:h-12 md:w-12 border-b-2 border-[#1A237E] mx-auto mb-4"></div>
+        <p class="text-base md:text-lg text-gray-600">Loading writing task...</p>
+    </div>
+</div>
+
+<!-- Error State -->
+<div id="errorState" class="hidden flex justify-center items-center min-h-[60vh] px-4">
+    <div class="text-center max-w-md mx-auto">
+        <div class="bg-red-50 border border-red-200 rounded-lg p-4 md:p-6">
+            <svg class="w-10 h-10 md:w-12 md:h-12 text-red-400 mx-auto mb-4" fill="none" stroke="currentColor"
+                viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <h3 class="text-base md:text-lg font-semibold text-red-800 mb-2">Unable to Load Task</h3>
+            <p id="errorMessage" class="text-sm md:text-base text-red-600 mb-4"></p>
+            <div class="flex flex-col sm:flex-row gap-3 justify-center">
+                <button onclick="location.reload()"
+                    class="bg-red-600 text-white px-4 py-2 rounded-lg text-sm md:text-base hover:bg-red-700 transition">
+                    Try Again
+                </button>
+                <a href="/task5.html"
+                    class="bg-gray-600 text-white px-4 py-2 rounded-lg text-sm md:text-base hover:bg-gray-700 transition">
+                    Back to Tasks
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Main Task Content -->
+<!-- Video Monitor UI (Fixed on Desktop, Relative on Mobile) -->
+<div
+    class="lg:fixed lg:top-24 lg:right-6 lg:w-72 lg:z-50 lg:mb-0 relative w-full max-w-sm mx-auto mb-6 bg-black rounded-xl overflow-hidden shadow-lg border border-gray-700">
+    <!-- Video Preview -->
+    <video id="videoPreview" autoplay muted playsinline
+        class="w-full h-48 object-cover transform scale-x-[-1] bg-gray-900"></video>
+
+    <!-- Controls Overlay -->
+    <div class="absolute bottom-4 left-0 right-0 flex justify-center space-x-4 z-10">
+        <!-- Mic Toggle -->
+        <button id="toggleMicBtn"
+            class="p-3 rounded-full bg-gray-700 hover:bg-gray-600 text-white transition focus:outline-none shadow-md"
+            title="Toggle Microphone">
+            <svg id="micIconOn" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+            </svg>
+            <svg id="micIconOff" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 hidden text-red-500" fill="none"
+                viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                <line x1="1" y1="1" x2="23" y2="23" stroke="currentColor" stroke-width="2" />
+            </svg>
+        </button>
+
+        <!-- Camera Toggle -->
+        <button id="toggleCamBtn"
+            class="p-3 rounded-full bg-gray-700 hover:bg-gray-600 text-white transition focus:outline-none shadow-md"
+            title="Toggle Camera">
+            <svg id="camIconOn" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+            </svg>
+            <svg id="camIconOff" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 hidden text-red-500" fill="none"
+                viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                <line x1="1" y1="1" x2="23" y2="23" stroke="currentColor" stroke-width="2" />
+            </svg>
+        </button>
+    </div>
+</div>
+<main id="taskContent"
+    class="hidden flex justify-center items-center min-h-[60vh] bg-transparent my-4 md:my-8 lg:my-16 px-4">
+    <div
+        class="w-full max-w-4xl bg-white rounded-xl md:rounded-2xl shadow-lg p-4 md:p-6 lg:p-8 flex flex-col items-center border border-gray-200">
+
+
+        <div class="flex items-center gap-2 md:gap-4 mb-4 md:mb-6">
+            <img src="{{ url_for('static', filename='write.jpg') }}" alt="Writing Task"
+                class="w-12 h-12 md:w-16 md:h-16 object-cover rounded-lg md:rounded-xl shadow-md">
+            <h2 class="text-xl md:text-2xl font-bold text-[#1A237E]" id="taskTitle">Writing Task</h2>
+        </div>
+
+        <!-- Retake Notification Placeholder -->
+        <div id="retakeNotification" class="w-full"></div>
+
+        <!-- Progress Loaded Notification Placeholder -->
+        <div id="progressNotification" class="w-full"></div>
+
+        <!-- Task Details -->
+        <div id="taskDetailsContainer" class="w-full mb-4 md:mb-6">
+            <!-- Dynamic task details will be loaded here -->
+        </div>
+
+        <!-- Writing Steps -->
+        <div class="w-full mb-4 md:mb-6">
+            <div class="bg-yellow-50 p-3 md:p-4 rounded-lg border border-yellow-200">
+                <div class="flex items-start">
+                    <svg class="w-5 h-5 text-yellow-600 mt-0.5 mr-2 flex-shrink-0" fill="currentColor"
+                        viewBox="0 0 20 20">
+                        <path fill-rule="evenodd"
+                            d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                            clip-rule="evenodd"></path>
+                    </svg>
+                    <div>
+                        <p class="text-yellow-800 font-semibold text-sm md:text-base mb-2">Steps to Complete:</p>
+                        <ol class="text-yellow-700 text-xs md:text-sm space-y-1 list-decimal list-inside">
+                            <li>Read the writing prompt carefully</li>
+                            <li>Write your response by hand on paper</li>
+                            <li>Take a clear photo of your writing</li>
+                            <li>Upload the photo using the form below</li>
+                            <li>Submit your work when ready</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Image Upload Section -->
+        <div class="w-full mb-4 md:mb-6">
+            <div class="border-2 border-dashed border-gray-300 rounded-lg p-4 md:p-6 text-center">
+                <div id="uploadArea" class="cursor-pointer">
+                    <svg class="mx-auto h-10 w-10 md:h-12 md:w-12 text-gray-400" stroke="currentColor" fill="none"
+                        viewBox="0 0 48 48">
+                        <path
+                            d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                    <p class="mt-2 text-xs md:text-sm text-gray-600">
+                        <span class="font-medium text-blue-600 hover:text-blue-500">Click to upload</span> or drag and
+                        drop
+                    </p>
+                    <p class="text-xs text-gray-500">PNG, JPG, GIF, BMP, TIFF, WEBP up to 10MB</p>
+                </div>
+
+                <input type="file" id="imageInput" accept="image/*" class="hidden">
+
+                <div id="imagePreview" class="hidden mt-4">
+                    <img id="previewImg" class="mx-auto max-h-48 md:max-h-64 rounded-lg shadow-md w-full object-contain"
+                        alt="Writing sample preview">
+                    <button id="removeImage"
+                        class="mt-2 text-red-600 hover:text-red-800 text-xs md:text-sm font-medium">
+                        Remove image
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex flex-col sm:flex-row gap-3 md:gap-4 w-full">
+            <button id="saveProgressBtn"
+                class="bg-gray-600 text-white px-4 md:px-8 py-2.5 md:py-3 rounded-lg text-sm md:text-base font-semibold transition hover:bg-gray-700 flex-1"
+                disabled>
+                Save Progress
+            </button>
+            <button id="submitBtn"
+                class="primary-bg text-white px-4 md:px-8 py-2.5 md:py-3 rounded-lg text-sm md:text-base font-semibold transition hover:bg-blue-700 flex-1"
+                disabled>
+                Submit Writing
+            </button>
+        </div>
+
+        <!-- Status Messages -->
+        <div id="statusMsg" class="mt-4 text-center text-sm md:text-base font-semibold hidden"></div>
+
+        <!-- Completion Buttons -->
+        <div id="completionButtons" class="mt-4 md:mt-6 flex flex-col sm:flex-row gap-3 md:gap-4 w-full hidden">
+            <button id="dashboardBtn"
+                class="bg-blue-600 text-white px-4 md:px-6 py-2.5 md:py-3 rounded-lg text-sm md:text-base font-semibold transition flex-1">
+                Return to Dashboard
+            </button>
+        </div>
+    </div>
+</main>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/video_recorder.js') }}"></script>
+<script>
+    // Global variables
+    let currentTask = null;
+    let selectedFile = null;
+    const userId = "{{ user_id }}";
+
+    // Load task content on page load
+    document.addEventListener('DOMContentLoaded', function () {
+        // Check if this is a retake
+        const urlParams = new URLSearchParams(window.location.search);
+        const isRetake = urlParams.get('retake') === 'true';
+
+        if (isRetake) {
+            const notificationDiv = document.createElement('div');
+            notificationDiv.className = 'bg-blue-100 border-l-4 border-blue-500 text-blue-700 p-4 mb-4';
+            notificationDiv.innerHTML = `
+                <p class="font-bold">Retake Mode</p>
+                <p>You are retaking this task. Your previous submission has been preserved.</p>
+            `;
+            document.getElementById('retakeNotification').appendChild(notificationDiv);
+        }
+
+        // Load task content
+        loadTaskContent();
+
+        // Initialize Video Monitor
+        VideoRecorder.init('videoPreview').then(success => {
+            if (!success) {
+                const videoPreview = document.getElementById('videoPreview');
+                if (videoPreview && videoPreview.parentElement) {
+                    const errorOverlay = document.createElement('div');
+                    errorOverlay.className = 'absolute inset-0 flex flex-col items-center justify-center bg-gray-900 bg-opacity-95 text-white p-4 text-center z-20';
+                    errorOverlay.innerHTML = `
+                        <svg class="h-10 w-10 text-red-500 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                        </svg>
+                        <div class="text-red-400 font-bold mb-1">Camera Not Available</div>
+                        <div class="text-xs text-gray-300">Please ensure you are using HTTPS or localhost.<br>Task will proceed without video.</div>
+                     `;
+                    videoPreview.parentElement.appendChild(errorOverlay);
+                    videoPreview.style.display = 'none';
+                }
+                return;
+            }
+
+            // Setup Toggle Buttons
+            const toggleMicBtn = document.getElementById('toggleMicBtn');
+            const toggleCamBtn = document.getElementById('toggleCamBtn');
+            const micIconOn = document.getElementById('micIconOn');
+            const micIconOff = document.getElementById('micIconOff');
+            const camIconOn = document.getElementById('camIconOn');
+            const camIconOff = document.getElementById('camIconOff');
+
+            if (toggleMicBtn) {
+                toggleMicBtn.addEventListener('click', () => {
+                    const isEnabled = VideoRecorder.toggleAudio();
+                    if (isEnabled) {
+                        micIconOn.classList.remove('hidden');
+                        micIconOff.classList.add('hidden');
+                        toggleMicBtn.classList.remove('bg-red-600', 'hover:bg-red-700');
+                        toggleMicBtn.classList.add('bg-gray-700', 'hover:bg-gray-600');
+                    } else {
+                        micIconOn.classList.add('hidden');
+                        micIconOff.classList.remove('hidden');
+                        toggleMicBtn.classList.remove('bg-gray-700', 'hover:bg-gray-600');
+                        toggleMicBtn.classList.add('bg-red-600', 'hover:bg-red-700');
+                    }
+                });
+            }
+
+            if (toggleCamBtn) {
+                toggleCamBtn.addEventListener('click', () => {
+                    const isEnabled = VideoRecorder.toggleVideo();
+                    if (isEnabled) {
+                        camIconOn.classList.remove('hidden');
+                        camIconOff.classList.add('hidden');
+                        toggleCamBtn.classList.remove('bg-red-600', 'hover:bg-red-700');
+                        toggleCamBtn.classList.add('bg-gray-700', 'hover:bg-gray-600');
+                    } else {
+                        camIconOn.classList.add('hidden');
+                        camIconOff.classList.remove('hidden');
+                        toggleCamBtn.classList.remove('bg-gray-700', 'hover:bg-gray-600');
+                        toggleCamBtn.classList.add('bg-red-600', 'hover:bg-red-700');
+                    }
+                });
+            }
+        });
+
+        // Check task status and load progress
+        checkTaskStatusAndLoadProgress();
+    });
+
+    function checkTaskStatusAndLoadProgress() {
+        // First check if task is already completed (but allow retakes)
+        const urlParams = new URLSearchParams(window.location.search);
+        const isRetake = urlParams.get('retake') === 'true';
+
+        if (!isRetake) {
+            // Only check completion status if not in retake mode
+            fetch('/api/user-tasks')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        const task = data.tasks.find(t => t.task_name === 'Writing Task');
+                        if (task && task.status === 'Completed') {
+                            alert('This task has already been completed. Redirecting to dashboard.');
+                            window.location.href = '/participant-dashboard';
+                            return;
+                        }
+                    }
+                })
+                .catch(() => {
+                    console.log('Could not check task status');
+                });
+        }
+
+        // Load saved writing progress (always check, even in retake mode)
+        setTimeout(() => {
+            loadSavedProgress();
+        }, 100);
+    }
+
+    function loadSavedProgress(taskId) {
+        // Load saved writing progress
+        const urlParams = new URLSearchParams(window.location.search);
+        const tId = taskId || urlParams.get('task_id');
+
+        let url = '/api/get-writing-progress?task_name=Writing Task';
+        if (tId) {
+            url += `&task_id=${tId}`;
+        }
+
+        fetch(url)
+            .then(res => res.json())
+            .then(data => {
+                if (data.success && data.progress && data.progress.filename) {
+                    // Show notification that progress was loaded
+                    const notificationContainer = document.getElementById('progressNotification');
+                    notificationContainer.innerHTML = '';
+
+                    const notificationDiv = document.createElement('div');
+                    notificationDiv.className = 'bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-4';
+                    notificationDiv.innerHTML = `
+                    <p class="font-bold">Progress Loaded</p>
+                    <p>Your previous writing sample has been preserved. You can continue or submit.</p>
+                `;
+                    notificationContainer.appendChild(notificationDiv);
+
+                    setTimeout(() => {
+                        notificationDiv.remove();
+                    }, 3000);
+
+                    // Show the saved image
+                    const imageUrl = `/uploads/${data.progress.filename}`;
+                    const previewImg = document.getElementById('previewImg');
+                    const imagePreview = document.getElementById('imagePreview');
+                    const uploadArea = document.getElementById('uploadArea');
+
+                    previewImg.src = imageUrl;
+                    imagePreview.classList.remove('hidden');
+                    uploadArea.classList.add('hidden');
+
+                    // Enable buttons so user can continue or submit
+                    document.getElementById('saveProgressBtn').disabled = false;
+                    document.getElementById('submitBtn').disabled = false;
+                }
+            })
+            .catch(() => {
+                console.log('Could not load saved progress');
+            });
+    }
+
+    function submitSavedProgress() {
+        // Submit the saved progress without requiring a new file
+        document.getElementById('submitBtn').disabled = true;
+        document.getElementById('saveProgressBtn').disabled = true;
+        showSuccess('Submitting your saved writing...');
+
+        fetch('/api/submit-saved-writing', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                task_name: 'Writing Task' // Always pass this
+            })
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showSuccess('Writing submitted successfully! Task completed.');
+
+                    showFeedbackModal('Writing Task', () => {
+                        document.getElementById('completionButtons').classList.remove('hidden');
+                    });
+                } else {
+                    showError('Failed to submit writing: ' + (data.message || 'Unknown error'));
+                    document.getElementById('submitBtn').disabled = false;
+                    document.getElementById('saveProgressBtn').disabled = false;
+                }
+            })
+            .catch(error => {
+                console.error('Error submitting writing:', error);
+                showError('Failed to submit writing. Please try again.');
+                document.getElementById('submitBtn').disabled = false;
+                document.getElementById('saveProgressBtn').disabled = false;
+            });
+    }
+
+    function saveExistingProgress() {
+        // Save the existing progress without requiring a new file
+        const btn = document.getElementById('saveProgressBtn');
+        btn.disabled = true;
+        showSuccess('Saving progress...');
+
+        fetch('/api/save-existing-writing-progress', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                task_name: 'Writing Task'
+            })
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showSuccess('Progress saved successfully! Redirecting to dashboard...');
+                    setTimeout(() => {
+                        window.location.href = '/participant-dashboard';
+                    }, 2000);
+                } else {
+                    showError('Failed to save progress: ' + (data.message || 'Unknown error'));
+                    btn.disabled = false;
+                }
+            })
+            .catch(error => {
+                console.error('Error saving progress:', error);
+                showError('Failed to save progress. Please try again.');
+                btn.disabled = false;
+            });
+    }
+
+    function loadTaskContent() {
+        // Get task ID from URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const taskId = urlParams.get('task_id');
+
+        if (!taskId) {
+            showErrorUI('No task selected. Please go back and select a writing task.');
+            return;
+        }
+
+        // Fetch the writing task content
+        fetch(`/api/writing-task/${taskId}`)
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('loadingState').classList.add('hidden');
+                if (data.success) {
+                    currentTask = data.task;
+                    displayTaskContent(data.task);
+                    document.getElementById('taskContent').classList.remove('hidden');
+
+                    // Start Video Recording
+                    VideoRecorder.start();
+                } else {
+                    showErrorUI('Failed to load writing task: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error loading writing task:', error);
+                document.getElementById('loadingState').classList.add('hidden');
+                showErrorUI('Failed to load writing task. Please try again.');
+            });
+    }
+
+    function displayTaskContent(task) {
+        // Update page title (browser tab)
+        document.title = `${task.task_name} - Dyslexia Research Study`;
+
+        // Render task details
+        const container = document.getElementById('taskDetailsContainer');
+        container.innerHTML = `
+            <div class="mb-3 md:mb-4 w-full bg-blue-50 rounded p-3 md:p-4 border border-blue-100">
+                <div class="space-y-4">
+                    <div class="bg-white p-4 rounded border border-gray-200">
+                        <h3 class="font-semibold text-sm md:text-base text-gray-700 mb-2">Instructions:</h3>
+                        <p class="text-gray-600 text-sm md:text-base lg:text-lg">${task.instructions}</p>
+                    </div>
+                    <div class="bg-white p-4 rounded border border-gray-200">
+                        <h3 class="font-semibold text-gray-700 mb-2">${task.task_name}</h3>
+                        <div class="text-gray-800 leading-relaxed whitespace-pre-wrap text-sm md:text-base lg:text-lg" style="line-height: 1.7;">${task.prompt}</div>
+                    </div>
+                    <div class="bg-gray-100 p-3 rounded text-sm text-gray-600">
+                        <strong>Word Limit:</strong> ${task.word_limit_min}-${task.word_limit_max} words |
+                        <strong>Estimated Time:</strong> ${task.estimated_time} minutes
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Load progress with specific task ID now that we have task
+        loadSavedProgress(task.id);
+    }
+
+    function showErrorUI(message) {
+        document.getElementById('errorMessage').textContent = message;
+        document.getElementById('errorState').classList.remove('hidden');
+    }
+
+    function showError(message) {
+        const statusMsg = document.getElementById('statusMsg');
+        statusMsg.textContent = message;
+        statusMsg.className = 'mt-4 text-center font-semibold text-red-600';
+        statusMsg.classList.remove('hidden');
+    }
+
+    function showSuccess(message) {
+        const statusMsg = document.getElementById('statusMsg');
+        statusMsg.textContent = message;
+        statusMsg.className = 'mt-4 text-center font-semibold text-green-600';
+        statusMsg.classList.remove('hidden');
+    }
+
+    // Image upload functionality
+    const uploadArea = document.getElementById('uploadArea');
+    const imageInput = document.getElementById('imageInput');
+    const imagePreview = document.getElementById('imagePreview');
+    const previewImg = document.getElementById('previewImg');
+    const removeImage = document.getElementById('removeImage');
+
+    // Handle drag and drop
+    uploadArea.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        uploadArea.classList.add('border-blue-400', 'bg-blue-50');
+    });
+
+    uploadArea.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        uploadArea.classList.remove('border-blue-400', 'bg-blue-50');
+    });
+
+    uploadArea.addEventListener('drop', (e) => {
+        e.preventDefault();
+        uploadArea.classList.remove('border-blue-400', 'bg-blue-50');
+
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            handleFileSelect(files[0]);
+        }
+    });
+
+    // Handle click to upload
+    uploadArea.addEventListener('click', () => {
+        imageInput.click();
+    });
+
+    imageInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+            handleFileSelect(e.target.files[0]);
+        }
+    });
+
+    function handleFileSelect(file) {
+        // Validate file type
+        if (!file.type.startsWith('image/')) {
+            showError('Please select an image file.');
+            return;
+        }
+
+        // Validate file size (10MB limit)
+        if (file.size > 10 * 1024 * 1024) {
+            showError('File size must be less than 10MB.');
+            return;
+        }
+
+        selectedFile = file;
+
+        // Create preview
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            previewImg.src = e.target.result;
+            imagePreview.classList.remove('hidden');
+            uploadArea.classList.add('hidden');
+
+            // Enable buttons
+            document.getElementById('saveProgressBtn').disabled = false;
+            document.getElementById('submitBtn').disabled = false;
+        };
+        reader.readAsDataURL(file);
+    }
+
+    removeImage.addEventListener('click', () => {
+        selectedFile = null;
+        imageInput.value = '';
+        imagePreview.classList.add('hidden');
+        uploadArea.classList.remove('hidden');
+
+        // Disable buttons
+        document.getElementById('saveProgressBtn').disabled = true;
+        document.getElementById('submitBtn').disabled = true;
+    });
+
+    // Save progress functionality
+    document.getElementById('saveProgressBtn').addEventListener('click', async function () {
+        if (!currentTask) return;
+
+        // Stop Video Recording
+        if (currentTask.id) {
+            await VideoRecorder.stopAndUpload(currentTask.id, 'Writing Task');
+        }
+
+        // Check if there's a new file selected or if we should save existing progress
+        if (!selectedFile) {
+            // No new file selected, check if there's saved progress to save again
+            fetch('/api/get-writing-progress?task_name=Writing Task')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success && data.progress && data.progress.filename) {
+                        // Save the existing progress again (no-op but allows user to return to dashboard)
+                        saveExistingProgress();
+                    } else {
+                        showError('Please select an image to save progress.');
+                    }
+                })
+                .catch(() => {
+                    showError('Please select an image to save progress.');
+                });
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('writing_image', selectedFile);
+        formData.append('task_id', currentTask.id);
+        formData.append('task_name', 'Writing Task'); // Always pass 'Writing Task'
+
+        this.disabled = true;
+        showSuccess('Saving progress...');
+
+        fetch('/api/save-writing-progress', {
+            method: 'POST',
+            body: formData
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showSuccess('Progress saved successfully! Redirecting to dashboard...');
+                    setTimeout(() => {
+                        window.location.href = '/participant-dashboard';
+                    }, 2000);
+                } else {
+                    showError('Failed to save progress: ' + (data.message || 'Unknown error'));
+                    this.disabled = false;
+                }
+            })
+            .catch(error => {
+                console.error('Error saving progress:', error);
+                showError('Failed to save progress. Please try again.');
+                this.disabled = false;
+            });
+    });
+
+    // Submit functionality
+    document.getElementById('submitBtn').addEventListener('click', async function () {
+        if (!currentTask) return;
+
+        // Stop Video Recording
+        if (currentTask.id) {
+            await VideoRecorder.stopAndUpload(currentTask.id, 'Writing Task');
+        }
+
+        // Check if there's a new file selected or if we should submit saved progress
+        if (!selectedFile) {
+            // No new file selected, check if there's saved progress to submit
+            fetch('/api/get-writing-progress?task_name=Writing Task')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success && data.progress && data.progress.filename) {
+                        // Submit the saved progress
+                        submitSavedProgress();
+                    } else {
+                        showError('Please select an image to submit.');
+                    }
+                })
+                .catch(() => {
+                    showError('Please select an image to submit.');
+                });
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('writing_image', selectedFile);
+        formData.append('task_id', currentTask.id);
+        formData.append('task_name', 'Writing Task');
+
+        this.disabled = true;
+        document.getElementById('saveProgressBtn').disabled = true;
+        showSuccess('Submitting writing...');
+
+        fetch('/api/submit-writing', {
+            method: 'POST',
+            body: formData
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showSuccess('Writing submitted successfully! Task completed.');
+
+                    showFeedbackModal('Writing Task', () => {
+                        document.getElementById('completionButtons').classList.remove('hidden');
+                    });
+                } else {
+                    showError('Failed to submit writing: ' + (data.message || 'Unknown error'));
+                    this.disabled = false;
+                    document.getElementById('saveProgressBtn').disabled = false;
+                }
+            })
+            .catch(error => {
+                console.error('Error submitting writing:', error);
+                showError('Failed to submit writing. Please try again.');
+                this.disabled = false;
+                document.getElementById('saveProgressBtn').disabled = false;
+            });
+    });
+
+    document.getElementById('dashboardBtn').addEventListener('click', function () {
+        window.location.href = '/participant-dashboard';
+    });
+</script>
+{% endblock %}
+{% block footer %}{% endblock %}

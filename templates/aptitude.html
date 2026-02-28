@@ -1,0 +1,885 @@
+{% extends "base_dashboard.html" %}
+
+{% block title %}Aptitude Test - Dyslexia Research Study{% endblock %}
+
+{% block extra_head %}
+<style>
+    .question-container {
+        display: none;
+    }
+
+    .question-container.active {
+        display: block;
+    }
+
+    .option-btn {
+        transition: all 0.3s ease;
+    }
+
+    .option-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    }
+
+    .option-btn.selected {
+        background-color: #1A237E;
+        color: white;
+    }
+
+    .progress-bar {
+        transition: width 0.5s ease;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Main Content -->
+<!-- Video Monitor UI (Fixed on Desktop, Relative on Mobile) -->
+<div
+    class="lg:fixed lg:top-24 lg:right-6 lg:w-72 lg:z-50 lg:mb-0 relative w-full max-w-sm mx-auto mb-6 bg-black rounded-xl overflow-hidden shadow-lg border border-gray-700">
+    <!-- Video Preview -->
+    <video id="videoPreview" autoplay muted playsinline
+        class="w-full h-48 object-cover transform scale-x-[-1] bg-gray-900"></video>
+
+    <!-- Controls Overlay -->
+    <div class="absolute bottom-4 left-0 right-0 flex justify-center space-x-4 z-10">
+        <!-- Mic Toggle -->
+        <button id="toggleMicBtn"
+            class="p-3 rounded-full bg-gray-700 hover:bg-gray-600 text-white transition focus:outline-none shadow-md"
+            title="Toggle Microphone">
+            <svg id="micIconOn" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+            </svg>
+            <svg id="micIconOff" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 hidden text-red-500" fill="none"
+                viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                <line x1="1" y1="1" x2="23" y2="23" stroke="currentColor" stroke-width="2" />
+            </svg>
+        </button>
+
+        <!-- Camera Toggle -->
+        <button id="toggleCamBtn"
+            class="p-3 rounded-full bg-gray-700 hover:bg-gray-600 text-white transition focus:outline-none shadow-md"
+            title="Toggle Camera">
+            <svg id="camIconOn" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+            </svg>
+            <svg id="camIconOff" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 hidden text-red-500" fill="none"
+                viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                <line x1="1" y1="1" x2="23" y2="23" stroke="currentColor" stroke-width="2" />
+            </svg>
+        </button>
+    </div>
+</div>
+<div class="content-wrapper mt-4 sm:mt-6 md:mt-8 mb-8 sm:mb-12 md:mb-16 px-3 sm:px-4">
+
+
+    <!-- Progress Bar -->
+    <div class="bg-white rounded-lg sm:rounded-xl shadow-md p-4 sm:p-5 md:p-6 mb-4 sm:mb-6 md:mb-8">
+        <div class="flex justify-between items-center mb-3 sm:mb-4">
+            <h2 class="text-base sm:text-lg md:text-xl font-bold">Test Progress</h2>
+            <span id="progressText" class="text-sm sm:text-base md:text-lg font-semibold text-blue-600">0%</span>
+        </div>
+        <div class="w-full bg-gray-200 rounded-full h-3 sm:h-4">
+            <div id="progressBar" class="bg-blue-600 h-3 sm:h-4 rounded-full transition-all duration-500"
+                style="width: 0%"></div>
+        </div>
+    </div>
+
+    <!-- Instructions -->
+    <div id="instructions" class="bg-white rounded-lg sm:rounded-xl shadow-md p-4 sm:p-6 md:p-8 mb-4 sm:mb-6 md:mb-8">
+        <h2 class="text-lg sm:text-xl md:text-2xl font-bold mb-4 sm:mb-5 md:mb-6 text-center text-gray-800">Aptitude
+            Test Instructions</h2>
+        <div class="max-w-3xl mx-auto space-y-3 sm:space-y-4 text-gray-700">
+            <p class="text-sm sm:text-base md:text-lg">Welcome to the Aptitude Test! This test consists of four sections
+                designed to assess different cognitive abilities:</p>
+            <ul class="list-disc list-inside space-y-2 ml-2 sm:ml-4 text-sm sm:text-base">
+                <li><strong>Logical Reasoning:</strong> Solve puzzles and identify patterns</li>
+                <li><strong>Numerical Ability:</strong> Work with numbers and mathematical concepts</li>
+                <li><strong>Verbal Ability:</strong> Understand and work with language</li>
+                <li><strong>Spatial Reasoning:</strong> Visualize and manipulate spatial relationships</li>
+            </ul>
+            <p class="text-sm sm:text-base md:text-lg"><strong>Time:</strong> Each section takes approximately 10-15
+                minutes</p>
+            <p class="text-sm sm:text-base md:text-lg"><strong>Instructions:</strong> Read each question carefully and
+                select the best answer</p>
+            <p class="text-sm sm:text-base md:text-lg"><strong>Note:</strong> You can save your progress and return
+                later</p>
+        </div>
+        <div class="text-center mt-6 sm:mt-8">
+            <button id="startTest"
+                class="primary-bg text-white px-6 sm:px-8 py-2.5 sm:py-3 rounded-lg text-base sm:text-lg font-semibold hover:bg-blue-700 transition w-full sm:w-auto">
+                Start Test
+            </button>
+        </div>
+    </div>
+
+    <!-- Test Sections -->
+    <div id="testSections" class="hidden">
+        <!-- Section Navigation -->
+        <div class="bg-white rounded-lg sm:rounded-xl shadow-md p-3 sm:p-4 md:p-6 mb-4 sm:mb-6 md:mb-8">
+            <div class="flex flex-wrap justify-center gap-2 sm:gap-3 md:gap-4">
+                <button
+                    class="section-nav px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm md:text-base font-medium transition"
+                    data-section="logical"><span class="hidden sm:inline">Logical </span>Reasoning</button>
+                <button
+                    class="section-nav px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm md:text-base font-medium transition"
+                    data-section="numerical"><span class="hidden sm:inline">Numerical </span>Ability</button>
+                <button
+                    class="section-nav px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm md:text-base font-medium transition"
+                    data-section="verbal"><span class="hidden sm:inline">Verbal </span>Ability</button>
+                <button
+                    class="section-nav px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm md:text-base font-medium transition"
+                    data-section="spatial"><span class="hidden sm:inline">Spatial </span>Reasoning</button>
+            </div>
+        </div>
+
+        <!-- Logical Reasoning Section -->
+        <div id="logicalSection" class="question-container active">
+            <div class="bg-white rounded-lg sm:rounded-xl shadow-md p-4 sm:p-6 md:p-8 mb-4 sm:mb-6 md:mb-8">
+                <h3 class="text-lg sm:text-xl md:text-2xl font-bold mb-4 sm:mb-5 md:mb-6 text-center text-gray-800">
+                    Logical Reasoning</h3>
+                <div class="max-w-2xl mx-auto">
+                    <div class="question mb-6 sm:mb-8">
+                        <p class="text-sm sm:text-base md:text-lg font-medium mb-3 sm:mb-4">1. Which number comes next
+                            in the sequence: 2, 6, 12, 20, 30, ?</p>
+                        <div class="grid grid-cols-2 gap-2 sm:gap-3 md:gap-4">
+                            <button
+                                class="option-btn p-3 sm:p-4 border-2 border-gray-300 rounded-lg text-sm sm:text-base text-center hover:border-blue-500"
+                                data-value="42">42</button>
+                            <button
+                                class="option-btn p-3 sm:p-4 border-2 border-gray-300 rounded-lg text-sm sm:text-base text-center hover:border-blue-500"
+                                data-value="44">44</button>
+                            <button
+                                class="option-btn p-3 sm:p-4 border-2 border-gray-300 rounded-lg text-sm sm:text-base text-center hover:border-blue-500"
+                                data-value="40">40</button>
+                            <button
+                                class="option-btn p-3 sm:p-4 border-2 border-gray-300 rounded-lg text-sm sm:text-base text-center hover:border-blue-500"
+                                data-value="38">38</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Numerical Ability Section -->
+        <div id="numericalSection" class="question-container">
+            <div class="bg-white rounded-lg sm:rounded-xl shadow-md p-4 sm:p-6 md:p-8 mb-4 sm:mb-6 md:mb-8">
+                <h3 class="text-lg sm:text-xl md:text-2xl font-bold mb-4 sm:mb-5 md:mb-6 text-center text-gray-800">
+                    Numerical Ability</h3>
+                <div class="max-w-2xl mx-auto">
+                    <div class="question mb-6 sm:mb-8">
+                        <p class="text-sm sm:text-base md:text-lg font-medium mb-3 sm:mb-4">1. What is 25% of 80?</p>
+                        <div class="grid grid-cols-2 gap-2 sm:gap-3 md:gap-4">
+                            <button
+                                class="option-btn p-3 sm:p-4 border-2 border-gray-300 rounded-lg text-sm sm:text-base text-center hover:border-blue-500"
+                                data-value="15">15</button>
+                            <button
+                                class="option-btn p-3 sm:p-4 border-2 border-gray-300 rounded-lg text-sm sm:text-base text-center hover:border-blue-500"
+                                data-value="20">20</button>
+                            <button
+                                class="option-btn p-3 sm:p-4 border-2 border-gray-300 rounded-lg text-sm sm:text-base text-center hover:border-blue-500"
+                                data-value="25">25</button>
+                            <button
+                                class="option-btn p-3 sm:p-4 border-2 border-gray-300 rounded-lg text-sm sm:text-base text-center hover:border-blue-500"
+                                data-value="30">30</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Verbal Ability Section -->
+        <div id="verbalSection" class="question-container">
+            <div class="bg-white rounded-lg sm:rounded-xl shadow-md p-4 sm:p-6 md:p-8 mb-4 sm:mb-6 md:mb-8">
+                <h3 class="text-lg sm:text-xl md:text-2xl font-bold mb-4 sm:mb-5 md:mb-6 text-center text-gray-800">
+                    Verbal Ability</h3>
+                <div class="max-w-2xl mx-auto">
+                    <div class="question mb-6 sm:mb-8">
+                        <p class="text-sm sm:text-base md:text-lg font-medium mb-3 sm:mb-4">1. Choose the word that best
+                            completes the analogy: Book is to Reading as Fork is to:</p>
+                        <div class="grid grid-cols-2 gap-2 sm:gap-3 md:gap-4">
+                            <button
+                                class="option-btn p-3 sm:p-4 border-2 border-gray-300 rounded-lg text-sm sm:text-base text-center hover:border-blue-500"
+                                data-value="eating">Eating</button>
+                            <button
+                                class="option-btn p-3 sm:p-4 border-2 border-gray-300 rounded-lg text-sm sm:text-base text-center hover:border-blue-500"
+                                data-value="cooking">Cooking</button>
+                            <button
+                                class="option-btn p-3 sm:p-4 border-2 border-gray-300 rounded-lg text-sm sm:text-base text-center hover:border-blue-500"
+                                data-value="cutting">Cutting</button>
+                            <button
+                                class="option-btn p-3 sm:p-4 border-2 border-gray-300 rounded-lg text-sm sm:text-base text-center hover:border-blue-500"
+                                data-value="washing">Washing</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Spatial Reasoning Section -->
+        <div id="spatialSection" class="question-container">
+            <div class="bg-white rounded-lg sm:rounded-xl shadow-md p-4 sm:p-6 md:p-8 mb-4 sm:mb-6 md:mb-8">
+                <h3 class="text-lg sm:text-xl md:text-2xl font-bold mb-4 sm:mb-5 md:mb-6 text-center text-gray-800">
+                    Spatial Reasoning</h3>
+                <div class="max-w-2xl mx-auto">
+                    <div class="question mb-6 sm:mb-8">
+                        <p class="text-sm sm:text-base md:text-lg font-medium mb-3 sm:mb-4">1. If you fold a piece of
+                            paper in half twice, how many layers will you have?</p>
+                        <div class="grid grid-cols-2 gap-2 sm:gap-3 md:gap-4">
+                            <button
+                                class="option-btn p-3 sm:p-4 border-2 border-gray-300 rounded-lg text-sm sm:text-base text-center hover:border-blue-500"
+                                data-value="2">2 layers</button>
+                            <button
+                                class="option-btn p-3 sm:p-4 border-2 border-gray-300 rounded-lg text-sm sm:text-base text-center hover:border-blue-500"
+                                data-value="3">3 layers</button>
+                            <button
+                                class="option-btn p-3 sm:p-4 border-2 border-gray-300 rounded-lg text-sm sm:text-base text-center hover:border-blue-500"
+                                data-value="4">4 layers</button>
+                            <button
+                                class="option-btn p-3 sm:p-4 border-2 border-gray-300 rounded-lg text-sm sm:text-base text-center hover:border-blue-500"
+                                data-value="6">6 layers</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="bg-white rounded-lg sm:rounded-xl shadow-md p-4 sm:p-5 md:p-6">
+            <div class="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 sm:gap-4">
+                <button id="saveProgress"
+                    class="bg-yellow-500 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg text-sm sm:text-base font-semibold hover:bg-yellow-600 transition w-full sm:w-auto">
+                    Save Progress
+                </button>
+                <div class="flex flex-col sm:flex-row gap-3 sm:gap-4">
+                    <button id="retakeTest"
+                        class="bg-orange-500 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg text-sm sm:text-base font-semibold hover:bg-orange-600 transition w-full sm:w-auto">
+                        Retake Test
+                    </button>
+                    <button id="submitTest"
+                        class="primary-bg text-white px-6 sm:px-8 py-2.5 sm:py-3 rounded-lg text-sm sm:text-base font-semibold hover:bg-blue-700 transition w-full sm:w-auto">
+                        Submit Test
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Messages Area -->
+        <div id="msgContainer" class="mt-4"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/video_recorder.js') }}"></script>
+<script>
+    // Load aptitude tasks from database based on user's class level
+    let currentAptitudeTask = null;
+
+    function loadAptitudeTasks() {
+        // Get user ID from session or pass it from backend
+        const userId = getUserId();
+
+        return fetch(`/api/aptitude-tasks/${userId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.tasks && data.tasks.length > 0) {
+                    // Use the first task (should be the appropriate class level)
+                    const task = data.tasks[0];
+                    currentAptitudeTask = task; // persist for scoring
+                    displayAptitudeTask(task);
+
+                    const contentWrapper = document.querySelector('.content-wrapper');
+                    // if (contentWrapper) {
+                    //     const classInfo = document.createElement('div');
+                    //     classInfo.className = 'bg-blue-100 border-l-4 border-blue-500 text-blue-700 p-4 mb-4';
+                    //     classInfo.innerHTML = `
+                    //         <p class="font-bold">Class Level ${data.class_level} Aptitude Test</p>
+                    //         <p>Questions tailored for your class level.</p>
+                    //     `;
+                    //     contentWrapper.insertBefore(classInfo, contentWrapper.firstChild);
+                    // }
+                } else {
+                    console.error('Failed to load aptitude tasks:', data.message);
+                    // Fall back to default questions
+                    displayDefaultQuestions();
+                }
+            })
+            .catch(error => {
+                console.error('Error loading aptitude tasks:', error);
+                // Fall back to default questions
+                displayDefaultQuestions();
+            });
+    }
+
+    // Display aptitude task from database
+    function displayAptitudeTask(task) {
+        // Update logical reasoning section
+        updateQuestionSection('logical', task.logical_question, task.logical_question_options);
+
+        // Update numerical ability section
+        updateQuestionSection('numerical', task.numerical_question, task.numerical_question_options);
+
+        // Update verbal ability section
+        updateQuestionSection('verbal', task.verbal_question, task.verbal_question_options);
+
+        // Update spatial reasoning section
+        updateQuestionSection('spatial', task.spatial_question, task.spatial_question_options);
+    }
+
+    // Update a question section with new question and options
+    function updateQuestionSection(sectionName, question, options) {
+        const section = document.getElementById(sectionName + 'Section');
+        if (!section) return;
+
+        const questions = section.querySelectorAll('.question');
+
+        // Update the single question
+        if (questions[0] && question) {
+            const questionText = questions[0].querySelector('p');
+            if (questionText) {
+                questionText.textContent = '1. ' + question;
+            }
+
+            // Update options
+            try {
+                if (typeof options === 'string') {
+                    options = JSON.parse(options);
+                }
+            } catch (e) {
+                options = [];
+            }
+            if (options && Array.isArray(options)) {
+                const optionsContainer = questions[0].querySelector('.grid, .space-y-3');
+                if (optionsContainer) {
+                    optionsContainer.innerHTML = '';
+                    options.forEach((option, index) => {
+                        const button = document.createElement('button');
+                        button.className = 'option-btn p-4 border-2 border-gray-300 rounded-lg text-center hover:border-blue-500';
+                        button.setAttribute('data-value', option);
+                        button.textContent = option;
+                        optionsContainer.appendChild(button);
+                    });
+                }
+            }
+        }
+
+        // Hide the second question if it exists
+        if (questions[1]) {
+            questions[1].style.display = 'none';
+        }
+    }
+
+    // Display default questions (fallback)
+    function displayDefaultQuestions() {
+        // Keep the existing hardcoded questions as fallback
+        console.log('Using default aptitude questions');
+    }
+
+    // Get user ID from backend template
+    function getUserId() {
+        return parseInt('{{ user_id|default(1) }}', 10);
+    }
+
+    // Check if this is a retake on page load
+    document.addEventListener('DOMContentLoaded', function () {
+        const urlParams = new URLSearchParams(window.location.search);
+        const isRetake = urlParams.get('retake') === 'true';
+
+        if (isRetake) {
+            // Show a notification that this is a retake
+            const notificationDiv = document.createElement('div');
+            notificationDiv.className = 'bg-blue-100 border-l-4 border-blue-500 text-blue-700 p-4 mb-4';
+            notificationDiv.innerHTML = `
+                <p class="font-bold">Retake Mode</p>
+                <p>You are retaking this task. Your previous submission has been preserved.</p>
+            `;
+
+            // Insert at the top of the content wrapper
+            const contentWrapper = document.querySelector('.content-wrapper');
+            if (contentWrapper) {
+                contentWrapper.insertBefore(notificationDiv, contentWrapper.firstChild);
+            }
+        }
+
+        // Load aptitude tasks first, then saved progress
+        loadAptitudeTasks().then(() => {
+            console.log('Tasks loaded, now loading saved progress...');
+            loadSavedProgress();
+        });
+
+        // Initialize Video Monitor
+        VideoRecorder.init('videoPreview').then(success => {
+            if (!success) {
+                const videoPreview = document.getElementById('videoPreview');
+                if (videoPreview && videoPreview.parentElement) {
+                    const errorOverlay = document.createElement('div');
+                    errorOverlay.className = 'absolute inset-0 flex flex-col items-center justify-center bg-gray-900 bg-opacity-95 text-white p-4 text-center z-20';
+                    errorOverlay.innerHTML = `
+                        <svg class="h-10 w-10 text-red-500 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                        </svg>
+                        <div class="text-red-400 font-bold mb-1">Camera Not Available</div>
+                        <div class="text-xs text-gray-300">Please ensure you are using HTTPS or localhost.<br>Task will proceed without video.</div>
+                     `;
+                    videoPreview.parentElement.appendChild(errorOverlay);
+                    videoPreview.style.display = 'none';
+                }
+                return;
+            }
+
+            // Setup Toggle Buttons
+            const toggleMicBtn = document.getElementById('toggleMicBtn');
+            const toggleCamBtn = document.getElementById('toggleCamBtn');
+            const micIconOn = document.getElementById('micIconOn');
+            const micIconOff = document.getElementById('micIconOff');
+            const camIconOn = document.getElementById('camIconOn');
+            const camIconOff = document.getElementById('camIconOff');
+
+            if (toggleMicBtn) {
+                toggleMicBtn.addEventListener('click', () => {
+                    const isEnabled = VideoRecorder.toggleAudio();
+                    if (isEnabled) {
+                        micIconOn.classList.remove('hidden');
+                        micIconOff.classList.add('hidden');
+                        toggleMicBtn.classList.remove('bg-red-600', 'hover:bg-red-700');
+                        toggleMicBtn.classList.add('bg-gray-700', 'hover:bg-gray-600');
+                    } else {
+                        micIconOn.classList.add('hidden');
+                        micIconOff.classList.remove('hidden');
+                        toggleMicBtn.classList.remove('bg-gray-700', 'hover:bg-gray-600');
+                        toggleMicBtn.classList.add('bg-red-600', 'hover:bg-red-700');
+                    }
+                });
+            }
+
+            if (toggleCamBtn) {
+                toggleCamBtn.addEventListener('click', () => {
+                    const isEnabled = VideoRecorder.toggleVideo();
+                    if (isEnabled) {
+                        camIconOn.classList.remove('hidden');
+                        camIconOff.classList.add('hidden');
+                        toggleCamBtn.classList.remove('bg-red-600', 'hover:bg-red-700');
+                        toggleCamBtn.classList.add('bg-gray-700', 'hover:bg-gray-600');
+                    } else {
+                        camIconOn.classList.add('hidden');
+                        camIconOff.classList.remove('hidden');
+                        toggleCamBtn.classList.remove('bg-gray-700', 'hover:bg-gray-600');
+                        toggleCamBtn.classList.add('bg-red-600', 'hover:bg-red-700');
+                    }
+                });
+            }
+        });
+    });
+
+    // Test state
+    let currentSection = 'logical';
+    let answers = {
+        logical: {},
+        numerical: {},
+        verbal: {},
+        spatial: {}
+    };
+    let totalQuestions = 4; // 1 question per section
+    let answeredQuestions = 0;
+
+    // DOM elements
+    const instructions = document.getElementById('instructions');
+    const testSections = document.getElementById('testSections');
+    const startTestBtn = document.getElementById('startTest');
+    const sectionNavs = document.querySelectorAll('.section-nav');
+    const sections = document.querySelectorAll('.question-container');
+    const progressBar = document.getElementById('progressBar');
+    const progressText = document.getElementById('progressText');
+    const saveProgressBtn = document.getElementById('saveProgress');
+    const submitTestBtn = document.getElementById('submitTest');
+    const retakeTestBtn = document.getElementById('retakeTest');
+
+    // Start test
+    startTestBtn.addEventListener('click', () => {
+        instructions.style.display = 'none';
+        testSections.classList.remove('hidden');
+
+        // Start Video Recording
+        VideoRecorder.start();
+    });
+
+    // Section navigation
+    sectionNavs.forEach(nav => {
+        nav.addEventListener('click', () => {
+            const section = nav.dataset.section;
+            showSection(section);
+            updateNavigation();
+        });
+    });
+
+    function showSection(sectionName) {
+        currentSection = sectionName;
+        sections.forEach(section => section.classList.remove('active'));
+        document.getElementById(sectionName + 'Section').classList.add('active');
+    }
+
+    function updateNavigation() {
+        sectionNavs.forEach(nav => {
+            if (nav.dataset.section === currentSection) {
+                nav.classList.add('bg-blue-600', 'text-white');
+                nav.classList.remove('bg-gray-200', 'text-gray-700');
+            } else {
+                nav.classList.remove('bg-blue-600', 'text-white');
+                nav.classList.add('bg-gray-200', 'text-gray-700');
+            }
+        });
+    }
+
+    // Handle option selection
+    document.addEventListener('click', (e) => {
+        if (e.target.classList.contains('option-btn')) {
+            const questionContainer = e.target.closest('.question');
+            const questionIndex = Array.from(questionContainer.parentNode.children).indexOf(questionContainer);
+            const section = currentSection;
+
+            // Remove previous selection from this question
+            questionContainer.querySelectorAll('.option-btn').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+
+            // Select new option
+            e.target.classList.add('selected');
+
+            // Store answer
+            answers[section][questionIndex] = e.target.dataset.value;
+
+            updateProgress();
+        }
+    });
+
+    function updateProgress() {
+        answeredQuestions = Object.values(answers).reduce((total, section) => {
+            return total + Object.keys(section).length;
+        }, 0);
+
+        const progress = Math.round((answeredQuestions / totalQuestions) * 100);
+        progressBar.style.width = progress + '%';
+        progressText.textContent = progress + '%';
+    }
+
+    // Save progress
+    saveProgressBtn.addEventListener('click', async () => {
+
+        // Stop Video Recording
+        if (currentAptitudeTask) {
+            await VideoRecorder.stopAndUpload(currentAptitudeTask.id, 'Aptitude Test');
+        }
+
+        const scores = calculateScores();
+        saveProgress(scores);
+    });
+
+    function calculateScores() {
+        const scores = {
+            logical_reasoning_score: 0,
+            numerical_ability_score: 0,
+            verbal_ability_score: 0,
+            spatial_reasoning_score: 0,
+            total_score: 0
+        };
+
+        // Require task loaded
+        if (!currentAptitudeTask) {
+            return scores;
+        }
+
+        // Normalize helper
+        const norm = v => (v == null ? '' : String(v).trim().toLowerCase());
+
+        // One question per section → correct if selected equals *_answer
+        const logicalSelected = answers.logical && answers.logical[0];
+        if (norm(logicalSelected) === norm(currentAptitudeTask.logical_answer)) {
+            scores.logical_reasoning_score = 1;
+        }
+
+        const numericalSelected = answers.numerical && answers.numerical[0];
+        if (norm(numericalSelected) === norm(currentAptitudeTask.numerical_answer)) {
+            scores.numerical_ability_score = 1;
+        }
+
+        const verbalSelected = answers.verbal && answers.verbal[0];
+        if (norm(verbalSelected) === norm(currentAptitudeTask.verbal_answer)) {
+            scores.verbal_ability_score = 1;
+        }
+
+        const spatialSelected = answers.spatial && answers.spatial[0];
+        if (norm(spatialSelected) === norm(currentAptitudeTask.spatial_answer)) {
+            scores.spatial_reasoning_score = 1;
+        }
+
+        scores.total_score = scores.logical_reasoning_score
+            + scores.numerical_ability_score
+            + scores.verbal_ability_score
+            + scores.spatial_reasoning_score;
+
+        return scores;
+    }
+
+    function saveProgress(scores) {
+        const payload = {
+            ...scores,
+            answers,
+            current_section: currentSection,
+            answered_count: answeredQuestions,
+            progress_percent: Math.round((answeredQuestions / totalQuestions) * 100),
+            task_name: 'Aptitude Test'
+        };
+        console.log('Sending aptitude save payload:', payload);  // Debug logging
+
+        // Show message
+        let msgBox = document.getElementById('aptitudeMsgBox');
+        if (!msgBox) {
+            msgBox = document.createElement('div');
+            msgBox.id = 'aptitudeMsgBox';
+            msgBox.className = 'mt-6 mb-2 text-lg font-semibold text-center';
+            // Insert just below the action buttons
+            document.getElementById('msgContainer').appendChild(msgBox);
+        }
+        msgBox.textContent = 'Saving progress...';
+        msgBox.style.color = 'blue';
+
+        fetch('/api/save-aptitude-progress', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    msgBox.textContent = 'Progress saved successfully! Redirecting to dashboard...';
+                    msgBox.style.color = '#166534'; // green-700
+                    setTimeout(() => {
+                        window.location.href = '/participant-dashboard';
+                    }, 1800);
+                } else {
+                    msgBox.textContent = 'Failed to save progress: ' + data.message;
+                    msgBox.style.color = '#b91c1c'; // red-700
+                    setTimeout(() => {
+                        msgBox.textContent = '';
+                    }, 2500);
+                }
+            })
+            .catch(error => {
+                msgBox.textContent = 'Error saving progress. Please try again.';
+                msgBox.style.color = '#b91c1c';
+                setTimeout(() => {
+                    msgBox.textContent = '';
+                }, 2500);
+            });
+    }
+
+    // Submit test
+    submitTestBtn.addEventListener('click', async () => {
+        if (answeredQuestions < totalQuestions) {
+            if (!confirm('You have not answered all questions. Are you sure you want to submit?')) {
+                return;
+            }
+        }
+
+        // Stop Video Recording
+        if (currentAptitudeTask) {
+            await VideoRecorder.stopAndUpload(currentAptitudeTask.id, 'Aptitude Test');
+        }
+
+        const scores = calculateScores();
+        submitTest(scores);
+    });
+
+    // Retake test
+    retakeTestBtn.addEventListener('click', async () => {
+        if (confirm('Are you sure you want to retake this test? This will create a new attempt and you will lose your current progress.')) {
+            // Stop current (abandoned) recording if any
+            if (currentAptitudeTask) {
+                await VideoRecorder.stopAndUpload(currentAptitudeTask.id, 'Aptitude Test (Abandoned)');
+            }
+            // Retake logic will reset state
+            retakeTest();
+
+            // Restart Recording
+            setTimeout(() => VideoRecorder.start(), 1000);
+        }
+    });
+
+    function submitTest(scores) {
+        const payload = {
+            ...scores,
+            answers,
+            current_section: currentSection,
+            answered_count: answeredQuestions,
+            progress_percent: Math.round((answeredQuestions / totalQuestions) * 100),
+            task_name: 'Aptitude Test'
+        };
+
+        console.log('Sending aptitude submit payload:', payload);
+
+        fetch('/api/submit-aptitude', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Show feedback modal before redirecting
+                    showFeedbackModal('Aptitude Test', () => {
+                        window.location.href = '/participant-dashboard';
+                    });
+                } else {
+                    alert('Failed to submit test: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error submitting test:', error);
+                alert('Error submitting test. Please try again.');
+            });
+    }
+
+    function retakeTest() {
+        fetch('/api/retake-aptitude', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                task_name: 'Aptitude Test'
+            })
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Reset the test state
+                    answers = {
+                        logical: {},
+                        numerical: {},
+                        verbal: {},
+                        spatial: {}
+                    };
+                    answeredQuestions = 0;
+                    currentSection = 'logical';
+
+                    // Clear all selected options
+                    document.querySelectorAll('.option-btn').forEach(btn => {
+                        btn.classList.remove('selected');
+                    });
+
+                    // Reset progress bar
+                    progressBar.style.width = '0%';
+                    progressText.textContent = '0%';
+
+                    // Show first section
+                    showSection('logical');
+                    updateNavigation();
+
+                    // Show notification
+                    const notificationDiv = document.createElement('div');
+                    notificationDiv.className = 'bg-blue-100 border-l-4 border-blue-500 text-blue-700 p-4 mb-4';
+                    notificationDiv.innerHTML = `
+                    <p class="font-bold">New Attempt Started</p>
+                    <p>You can now retake the test. Your previous attempt has been preserved.</p>
+                `;
+
+                    const contentWrapper = document.querySelector('.content-wrapper');
+                    if (contentWrapper) {
+                        contentWrapper.insertBefore(notificationDiv, contentWrapper.firstChild);
+                        setTimeout(() => {
+                            notificationDiv.remove();
+                        }, 3000);
+                    }
+                } else {
+                    alert('Failed to start retake: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error starting retake:', error);
+                alert('Error starting retake. Please try again.');
+            });
+    }
+
+    // Load saved progress
+    function loadSavedProgress() {
+        console.log('Loading saved aptitude progress...');
+        fetch('/api/get-aptitude-progress?task_name=Aptitude Test')
+            .then(response => response.json())
+            .then(data => {
+                console.log('Aptitude progress API response:', data);
+                if (data.success && data.progress) {
+                    try {
+                        const saved = data.progress;
+                        console.log('Saved progress data:', saved);
+
+                        // Restore answers
+                        if (saved.answers) {
+                            const savedAnswers = typeof saved.answers === 'string' ? JSON.parse(saved.answers) : saved.answers;
+                            console.log('Parsed saved answers:', savedAnswers);
+                            if (savedAnswers && typeof savedAnswers === 'object') {
+                                answers = savedAnswers;
+                                console.log('Answers restored:', answers);
+                            }
+                        }
+
+                        // Restore current section if available
+                        if (saved.current_section) {
+                            showSection(saved.current_section);
+                            updateNavigation();
+                        }
+
+                        // Paint selections in UI
+                        Object.keys(answers).forEach(sectionKey => {
+                            const sectionEl = document.getElementById(sectionKey + 'Section');
+                            if (!sectionEl) return;
+                            const questions = Array.from(sectionEl.querySelectorAll('.question'));
+                            Object.keys(answers[sectionKey]).forEach(idx => {
+                                const qIndex = parseInt(idx, 10);
+                                const qEl = questions[qIndex];
+                                if (!qEl) return;
+                                const val = answers[sectionKey][idx];
+                                const btn = qEl.querySelector(`.option-btn[data-value="${val}"]`);
+                                if (btn) {
+                                    qEl.querySelectorAll('.option-btn').forEach(b => b.classList.remove('selected'));
+                                    btn.classList.add('selected');
+                                }
+                            });
+                        });
+
+                        // Restore progress bar/text
+                        if (typeof saved.answered_count === 'number') {
+                            answeredQuestions = saved.answered_count;
+                        } else {
+                            updateProgress();
+                        }
+                        const pct = saved.progress_percent || Math.round((answeredQuestions / totalQuestions) * 100);
+                        progressBar.style.width = pct + '%';
+                        progressText.textContent = pct + '%';
+                    } catch (e) {
+                        console.error('Error restoring aptitude progress:', e);
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error loading progress:', error);
+            });
+    }
+
+    // Initialize
+    updateNavigation();
+</script>
+{% endblock %}
+{% block footer %}{% endblock %}

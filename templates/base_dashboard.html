@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Dyslexia Research Study{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='landing_style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='sidebar.css') }}">
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
+    <link rel="manifest" href="{{ url_for('manifest') }}">
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function () {
+                navigator.serviceWorker.register("{{ url_for('service_worker') }}")
+                    .then(function (registration) {
+                        console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                    }, function (err) {
+                        console.log('ServiceWorker registration failed: ', err);
+                    });
+            });
+        }
+    </script>
+    {% block extra_head %}{% endblock %}
+</head>
+
+<body class="bg-[#f5f5dc]" style="background-color: #f5f5dc;">
+    <!-- User ID for Sidebar JS -->
+    <script>const USER_ID = {{ session.get('user_id') | tojson |default ("null") }};</script>
+
+    <!-- Sidebar Component -->
+    {% block sidebar %}
+    {% include 'components/sidebar.html' %}
+    {% endblock %}
+
+    <!-- Main Content Wrapper -->
+    <div class="main-content-wrapper">
+
+        <!-- Accessibility Panel Component -->
+        {% include 'components/accessibility.html' %}
+
+        <!-- Navbar Component -->
+        {% block navbar %}
+        {% include 'components/navbar_dashboard.html' %}
+        {% endblock %}
+
+        <!-- Content Block -->
+        {% block content %}{% endblock %}
+
+        <!-- Footer (Optional, can be overridden) -->
+        {% block footer %}
+        <footer class="dark-bg text-white py-8 sm:py-10 md:py-12 text-xs sm:text-sm md:text-base"
+            style="background-color: #333333;">
+            <div class="content-wrapper px-3 sm:px-4">
+                <div class="text-center text-gray-400 text-xs sm:text-sm">
+                    <p>&copy; 2025 Leveraging NLP for Dyslexia Identification. All rights reserved.</p>
+                </div>
+            </div>
+        </footer>
+        {% endblock %}
+
+    </div> <!-- End Wrapper -->
+
+
+    <!-- Retake Confirmation Modal (Global) -->
+    <div id="retakeModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 animate-fade-in-up transform transition-all">
+            <div class="text-center">
+                <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-blue-100 mb-4">
+                    <svg class="h-6 w-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15">
+                        </path>
+                    </svg>
+                </div>
+                <h3 class="text-lg leading-6 font-medium text-gray-900 mb-2">Retake Task?</h3>
+                <p class="text-sm text-gray-500 mb-6">
+                    You have already completed <span id="retakeTaskName" class="font-bold text-gray-700">this
+                        task</span>.
+                    Do you want to retake it? This will create a new attempt.
+                </p>
+                <div class="flex justify-center gap-3">
+                    <button id="cancelRetakeBtn"
+                        class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition focus:outline-none">
+                        Cancel
+                    </button>
+                    <button id="confirmRetakeBtn"
+                        class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition focus:outline-none font-medium">
+                        Yes, Retake It
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Feedback Modal -->
+    <div id="feedbackModal"
+        class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center transition-opacity duration-300 opacity-0">
+        <div class="bg-white rounded-2xl shadow-2xl p-6 md:p-8 max-w-lg w-full mx-4 transform transition-all duration-300 scale-95"
+            id="feedbackContent">
+            <div class="text-center mb-6">
+                <div class="inline-block p-3 rounded-full bg-yellow-100 mb-4">
+                    <span class="text-4xl">🌟</span>
+                </div>
+                <h3 class="text-2xl font-bold text-gray-800">Great Job!</h3>
+                <p class="text-gray-600 mt-2">How was this task for you?</p>
+            </div>
+
+            <div class="flex justify-center gap-2 mb-6" id="starContainer">
+                <!-- Stars will be generated by JS -->
+                <button class="star-btn text-3xl focus:outline-none transition hover:scale-110 text-gray-300"
+                    data-rating="1">★</button>
+                <button class="star-btn text-3xl focus:outline-none transition hover:scale-110 text-gray-300"
+                    data-rating="2">★</button>
+                <button class="star-btn text-3xl focus:outline-none transition hover:scale-110 text-gray-300"
+                    data-rating="3">★</button>
+                <button class="star-btn text-3xl focus:outline-none transition hover:scale-110 text-gray-300"
+                    data-rating="4">★</button>
+                <button class="star-btn text-3xl focus:outline-none transition hover:scale-110 text-gray-300"
+                    data-rating="5">★</button>
+            </div>
+
+            <div class="mb-6">
+                <label for="feedbackComment" class="block text-sm font-medium text-gray-700 mb-2">Any comments or
+                    suggestions?</label>
+                <textarea id="feedbackComment" rows="3"
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+                    placeholder="Type your thoughts here... (Optional)"></textarea>
+            </div>
+
+            <button id="submitFeedbackBtn"
+                class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-xl hover:bg-blue-700 transition transform active:scale-95 shadow-md">
+                Submit Feedback
+            </button>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="{{ url_for('static', filename='sidebar.js') }}"></script>
+    <script src="{{ url_for('static', filename='accessibility.js') }}"></script>
+    {% block scripts %}{% endblock %}
+
+    <script>
+        // Feedback Modal Logic
+        const feedbackModal = document.getElementById('feedbackModal');
+        const feedbackContent = document.getElementById('feedbackContent');
+        const starContainer = document.getElementById('starContainer');
+        const stars = starContainer.querySelectorAll('.star-btn');
+        const commentBox = document.getElementById('feedbackComment');
+        const submitFeedbackBtn = document.getElementById('submitFeedbackBtn');
+
+        let currentRating = 0;
+        let currentTaskName = '';
+        let feedbackCallback = null;
+
+        function showFeedbackModal(taskName, onClosed, stats = null) {
+            currentTaskName = taskName;
+            feedbackCallback = onClosed;
+            currentRating = 0;
+            commentBox.value = '';
+            updateStars(0);
+
+            // Inject Stats if available
+            const feedbackContentBody = document.getElementById('feedbackContent');
+            // Remove any existing stats container to prevent duplicates
+            const existingStats = document.getElementById('reading-stats-container');
+            if (existingStats) existingStats.remove();
+
+            if (stats) {
+                const statsHtml = `
+                    <div id="reading-stats-container" class="mb-6 bg-blue-50 p-4 rounded-xl border border-blue-100">
+                        <h4 class="font-bold text-gray-800 mb-3 text-center text-lg">Reading Analysis</h4>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="text-center p-2 bg-white rounded shadow-sm">
+                                <span class="block text-2xl font-bold text-blue-600">${stats.accuracy}%</span>
+                                <span class="text-xs text-gray-500 uppercase tracking-wide">Accuracy</span>
+                            </div>
+                            <div class="text-center p-2 bg-white rounded shadow-sm">
+                                <span class="block text-2xl font-bold text-green-600">${stats.wpm}</span>
+                                <span class="text-xs text-gray-500 uppercase tracking-wide">WPM</span>
+                            </div>
+                            <div class="text-center p-2 bg-white rounded shadow-sm">
+                                <span class="block text-lg font-bold text-orange-600">${stats.mispronounced_words}</span>
+                                <span class="text-xs text-gray-500">Mispronounced</span>
+                            </div>
+                            <div class="text-center p-2 bg-white rounded shadow-sm">
+                                <span class="block text-lg font-bold text-red-600">${stats.skipped_words}</span>
+                                <span class="text-xs text-gray-500">Skipped</span>
+                            </div>
+                        </div>
+                         <div class="mt-3">
+                             <p class="text-xs text-gray-600"><strong>Transcribed:</strong> <span class="italic">"${stats.transcribed_text}"</span></p>
+                        </div>
+                    </div>
+                `;
+                // Insert after the "Great Job" header (second child of feedbackContentBody)
+                // actually feedbackContentBody has: div.text-center, div#starContainer
+                // Let's insert before starContainer
+                const starContainer = document.getElementById('starContainer');
+                starContainer.insertAdjacentHTML('beforebegin', statsHtml);
+            }
+
+            feedbackModal.classList.remove('hidden');
+            // Small delay to allow display:block to apply before opacity transition
+            setTimeout(() => {
+                feedbackModal.classList.remove('opacity-0');
+                feedbackContent.classList.remove('scale-95');
+                feedbackContent.classList.add('scale-100');
+            }, 10);
+        }
+
+        function closeFeedbackModal() {
+            feedbackModal.classList.add('opacity-0');
+            feedbackContent.classList.remove('scale-100');
+            feedbackContent.classList.add('scale-95');
+
+            setTimeout(() => {
+                feedbackModal.classList.add('hidden');
+                if (feedbackCallback) feedbackCallback();
+            }, 300);
+        }
+
+        function updateStars(rating) {
+            stars.forEach(star => {
+                const starRating = parseInt(star.dataset.rating);
+                if (starRating <= rating) {
+                    star.classList.remove('text-gray-300');
+                    star.classList.add('text-yellow-400', 'drop-shadow-sm');
+                } else {
+                    star.classList.remove('text-yellow-400', 'drop-shadow-sm');
+                    star.classList.add('text-gray-300');
+                }
+            });
+        }
+
+        stars.forEach(star => {
+            star.addEventListener('click', () => {
+                currentRating = parseInt(star.dataset.rating);
+                updateStars(currentRating);
+            });
+
+            star.addEventListener('mouseenter', () => {
+                const hoverRating = parseInt(star.dataset.rating);
+                updateStars(hoverRating);
+            });
+        });
+
+        starContainer.addEventListener('mouseleave', () => {
+            updateStars(currentRating);
+        });
+
+        submitFeedbackBtn.addEventListener('click', () => {
+            if (currentRating === 0) {
+                // Shake animation or toast to indicate rating required
+                submitFeedbackBtn.classList.add('animate-pulse');
+                setTimeout(() => submitFeedbackBtn.classList.remove('animate-pulse'), 500);
+                return; // Optionally require rating
+            }
+
+            // Submit to backend
+            submitFeedbackBtn.disabled = true;
+            submitFeedbackBtn.textContent = 'Saving...';
+
+            fetch('/api/submit-feedback', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    task_name: currentTaskName,
+                    rating: currentRating,
+                    comments: commentBox.value
+                })
+            })
+                .then(res => res.json())
+                .then(data => {
+                    // Success logic
+                    submitFeedbackBtn.textContent = 'Submitted!';
+                    setTimeout(() => {
+                        closeFeedbackModal();
+                        submitFeedbackBtn.disabled = false;
+                        submitFeedbackBtn.textContent = 'Submit Feedback';
+                    }, 800);
+                })
+                .catch(err => {
+                    console.error('Error submitting feedback:', err);
+                    submitFeedbackBtn.textContent = 'Error. Try Again';
+                    submitFeedbackBtn.disabled = false;
+                });
+        });
+    </script>
+    <script>
+        // Global Retake Logic
+        document.addEventListener('DOMContentLoaded', function () {
+            const retakeModal = document.getElementById('retakeModal');
+            const retakeTaskNameSpan = document.getElementById('retakeTaskName');
+            const confirmRetakeBtn = document.getElementById('confirmRetakeBtn');
+            const cancelRetakeBtn = document.getElementById('cancelRetakeBtn');
+
+            let taskToRetake = null;
+            let pendingUrl = null;
+
+            if (!retakeModal) return;
+
+            // Close modal helper
+            function hideRetakeModal() {
+                retakeModal.classList.add('hidden');
+                taskToRetake = null;
+                pendingUrl = null;
+            }
+
+            // Event Listeners for Modal
+            cancelRetakeBtn.addEventListener('click', hideRetakeModal);
+            retakeModal.addEventListener('click', (e) => {
+                if (e.target === retakeModal) hideRetakeModal();
+            });
+
+            // Confirm Listener
+            if (confirmRetakeBtn) {
+                confirmRetakeBtn.addEventListener('click', () => {
+                    if (!taskToRetake) return;
+
+                    confirmRetakeBtn.disabled = true;
+                    confirmRetakeBtn.textContent = 'Processing...';
+
+                    fetch('/api/retake-task', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ task_name: taskToRetake })
+                    })
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.success) {
+                                // Navigate
+                                // If pendingUrl is null (shouldn't be), reload
+                                if (pendingUrl) {
+                                    const separator = pendingUrl.includes('?') ? '&' : '?';
+                                    window.location.href = pendingUrl + separator + 'retake=true';
+                                } else {
+                                    window.location.reload();
+                                }
+                            } else {
+                                alert(data.message || 'Failed to reset task');
+                                hideRetakeModal();
+                            }
+                        })
+                        .catch(err => {
+                            console.error('Retake error:', err);
+                            alert('Error resetting task');
+                            hideRetakeModal();
+                        })
+                        .finally(() => {
+                            confirmRetakeBtn.disabled = false;
+                            confirmRetakeBtn.textContent = 'Yes, Retake It';
+                        });
+                });
+            }
+
+            // Delegated Listener for .task-link clicks (Sidebar links)
+            document.body.addEventListener('click', function (e) {
+                // We prioritize looking for .task-link
+                // Note: The click might be on an icon inside the link, so use closest
+                const link = e.target.closest('.task-link');
+                if (link) {
+                    const taskName = link.getAttribute('data-task-name');
+                    const url = link.getAttribute('href');
+
+                    // If valid task link
+                    if (taskName && url && url !== '#' && !url.startsWith('javascript')) {
+                        e.preventDefault();
+
+                        // Check status
+                        fetch(`/api/get-task-status?task_name=${encodeURIComponent(taskName)}`)
+                            .then(r => r.json())
+                            .then(data => {
+                                if (data.success && data.status === 'Completed') {
+                                    // Task is completed, prompt retake
+                                    taskToRetake = taskName;
+                                    pendingUrl = url;
+                                    if (retakeTaskNameSpan) retakeTaskNameSpan.textContent = taskName;
+                                    retakeModal.classList.remove('hidden');
+                                } else {
+                                    // Not completed (or error), just navigate
+                                    window.location.href = url;
+                                }
+                            })
+                            .catch(err => {
+                                console.error('Status check failed', err);
+                                window.location.href = url;
+                            });
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+
+</html>

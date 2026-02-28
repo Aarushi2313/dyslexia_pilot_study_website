@@ -1,0 +1,468 @@
+{% extends "base_dashboard.html" %}
+
+{% block title %}Typing Task - Dyslexia Research Study{% endblock %}
+
+{% block content %}
+<!-- Main Content -->
+<!-- Video Monitor UI (Fixed on Desktop, Relative on Mobile) -->
+<div
+    class="lg:fixed lg:top-24 lg:right-6 lg:w-72 lg:z-50 lg:mb-0 relative w-full max-w-sm mx-auto mb-6 bg-black rounded-xl overflow-hidden shadow-lg border border-gray-700">
+    <!-- Video Preview -->
+    <video id="videoPreview" autoplay muted playsinline
+        class="w-full h-48 object-cover transform scale-x-[-1] bg-gray-900"></video>
+
+    <!-- Controls Overlay -->
+    <div class="absolute bottom-4 left-0 right-0 flex justify-center space-x-4 z-10">
+        <!-- Mic Toggle -->
+        <button id="toggleMicBtn"
+            class="p-3 rounded-full bg-gray-700 hover:bg-gray-600 text-white transition focus:outline-none shadow-md"
+            title="Toggle Microphone">
+            <svg id="micIconOn" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+            </svg>
+            <svg id="micIconOff" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 hidden text-red-500" fill="none"
+                viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                <line x1="1" y1="1" x2="23" y2="23" stroke="currentColor" stroke-width="2" />
+            </svg>
+        </button>
+
+        <!-- Camera Toggle -->
+        <button id="toggleCamBtn"
+            class="p-3 rounded-full bg-gray-700 hover:bg-gray-600 text-white transition focus:outline-none shadow-md"
+            title="Toggle Camera">
+            <svg id="camIconOn" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+            </svg>
+            <svg id="camIconOff" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 hidden text-red-500" fill="none"
+                viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                <line x1="1" y1="1" x2="23" y2="23" stroke="currentColor" stroke-width="2" />
+            </svg>
+        </button>
+    </div>
+</div>
+<div class="content-wrapper flex justify-center items-center min-h-[60vh] bg-transparent my-4 md:my-8 lg:my-16 px-4">
+    <div
+        class="w-full max-w-xl md:max-w-2xl lg:max-w-4xl bg-white rounded-xl md:rounded-2xl shadow-lg p-4 md:p-6 lg:p-8 flex flex-col items-center border border-gray-200">
+
+
+        <div class="flex items-center gap-2 md:gap-4 mb-3 md:mb-4">
+            <img src="{{ url_for('static', filename='type.png') }}" alt="Typing Task"
+                class="w-12 h-12 md:w-16 md:h-16 object-cover rounded-lg md:rounded-xl shadow-md">
+            <h2 class="text-lg md:text-2xl font-bold text-[#1A237E]">Typing Task</h2>
+        </div>
+
+        <div class="mb-3 md:mb-4 w-full bg-blue-50 rounded p-3 md:p-4 border border-blue-100">
+            <span class="font-semibold text-sm md:text-base"></span>
+            <div id="typingPrompt" class="mt-2 text-gray-800 text-sm md:text-base lg:text-lg">
+                <!-- Dynamic content will be loaded here -->
+                <div class="text-center py-8">
+                    <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                    <p class="mt-2 text-gray-600">Loading typing task...</p>
+                </div>
+            </div>
+        </div>
+        <div id="timer" class="mb-3 md:mb-4 text-right text-sm md:text-base text-gray-600 w-full">Time: <span
+                id="timerValue">00:00</span></div>
+        <textarea id="typingArea"
+            class="w-full h-48 md:h-56 p-3 md:p-4 border border-gray-300 rounded-lg text-sm md:text-base lg:text-lg focus:outline-none focus:ring-2 focus:ring-blue-400 mb-3 md:mb-4 resize-none"
+            placeholder="Start typing here..."></textarea>
+
+        <div class="flex flex-col sm:flex-row gap-3 md:gap-4 w-full mb-3 md:mb-4">
+            <button id="saveProgressBtn"
+                class="bg-gray-600 text-white px-4 md:px-6 py-2.5 md:py-3 rounded-lg text-sm md:text-base font-semibold transition flex-1">Save
+                Progress</button>
+            <button id="submitBtn"
+                class="primary-bg text-white px-4 md:px-6 py-2.5 md:py-3 rounded-lg text-sm md:text-base font-semibold transition flex-1">Submit
+                Text</button>
+        </div>
+        <div id="uploadMsg" class="mt-2 text-sm md:text-base text-green-700 font-semibold hidden"></div>
+        <div id="completionButtons" class="mt-4 flex flex-col sm:flex-row gap-3 md:gap-4 w-full hidden">
+            <button id="dashboardBtn"
+                class="bg-blue-600 text-white px-4 md:px-6 py-2.5 md:py-3 rounded-lg text-sm md:text-base font-semibold transition flex-1">Continue
+                to Dashboard</button>
+        </div>
+        <!-- Keystroke logging and timer logic will be handled in the script section -->
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/video_recorder.js') }}"></script>
+<script>
+    // Typing Task Logic
+    let timer = 0;
+    let timerInterval = null;
+    let typingStarted = false;
+    let keystrokeLog = [];
+    let lastTime = null;
+    let submitted = false;
+    let currentTaskId = null;
+    let currentTask = null;
+    const typingArea = document.getElementById('typingArea');
+    const timerValue = document.getElementById('timerValue');
+    const saveProgressBtn = document.getElementById('saveProgressBtn');
+    const submitBtn = document.getElementById('submitBtn');
+    const uploadMsg = document.getElementById('uploadMsg');
+    const completionButtons = document.getElementById('completionButtons');
+
+    // Check if task is already completed on page load
+    document.addEventListener('DOMContentLoaded', function () {
+        // Check if this is a retake
+        const urlParams = new URLSearchParams(window.location.search);
+        const isRetake = urlParams.get('retake') === 'true';
+
+        if (isRetake) {
+            // Show a notification that this is a retake
+            const notificationDiv = document.createElement('div');
+            notificationDiv.className = 'bg-blue-100 border-l-4 border-blue-500 text-blue-700 p-4 mb-4';
+            notificationDiv.innerHTML = `
+                <p class="font-bold">Retake Mode</p>
+                <p>You are retaking this task. Your previous submission has been preserved.</p>
+            `;
+
+            // Insert at the top of the content wrapper
+            const contentWrapper = document.querySelector('.content-wrapper');
+            if (contentWrapper) {
+                contentWrapper.insertBefore(notificationDiv, contentWrapper.firstChild);
+            }
+        }
+
+        // Initialize Video Monitor
+        VideoRecorder.init('videoPreview').then(success => {
+            if (!success) {
+                const videoPreview = document.getElementById('videoPreview');
+                if (videoPreview && videoPreview.parentElement) {
+                    const errorOverlay = document.createElement('div');
+                    errorOverlay.className = 'absolute inset-0 flex flex-col items-center justify-center bg-gray-900 bg-opacity-95 text-white p-4 text-center z-20';
+                    errorOverlay.innerHTML = `
+                        <svg class="h-10 w-10 text-red-500 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                        </svg>
+                        <div class="text-red-400 font-bold mb-1">Camera Not Available</div>
+                        <div class="text-xs text-gray-300">Please ensure you are using HTTPS or localhost.<br>Task will proceed without video.</div>
+                     `;
+                    videoPreview.parentElement.appendChild(errorOverlay);
+                    // Hide the video element to avoid confusion
+                    videoPreview.style.display = 'none';
+                }
+                return;
+            }
+
+            // Setup Toggle Buttons
+            const toggleMicBtn = document.getElementById('toggleMicBtn');
+            const toggleCamBtn = document.getElementById('toggleCamBtn');
+            const micIconOn = document.getElementById('micIconOn');
+            const micIconOff = document.getElementById('micIconOff');
+            const camIconOn = document.getElementById('camIconOn');
+            const camIconOff = document.getElementById('camIconOff');
+
+            toggleMicBtn.addEventListener('click', () => {
+                const isEnabled = VideoRecorder.toggleAudio();
+                if (isEnabled) {
+                    micIconOn.classList.remove('hidden');
+                    micIconOff.classList.add('hidden');
+                    toggleMicBtn.classList.remove('bg-red-600', 'hover:bg-red-700');
+                    toggleMicBtn.classList.add('bg-gray-700', 'hover:bg-gray-600');
+                } else {
+                    micIconOn.classList.add('hidden');
+                    micIconOff.classList.remove('hidden');
+                    toggleMicBtn.classList.remove('bg-gray-700', 'hover:bg-gray-600');
+                    toggleMicBtn.classList.add('bg-red-600', 'hover:bg-red-700');
+                }
+            });
+
+            toggleCamBtn.addEventListener('click', () => {
+                const isEnabled = VideoRecorder.toggleVideo();
+                if (isEnabled) {
+                    camIconOn.classList.remove('hidden');
+                    camIconOff.classList.add('hidden');
+                    toggleCamBtn.classList.remove('bg-red-600', 'hover:bg-red-700');
+                    toggleCamBtn.classList.add('bg-gray-700', 'hover:bg-gray-600');
+                } else {
+                    camIconOn.classList.add('hidden');
+                    camIconOff.classList.remove('hidden');
+                    toggleCamBtn.classList.remove('bg-gray-700', 'hover:bg-gray-600');
+                    toggleCamBtn.classList.add('bg-red-600', 'hover:bg-red-700');
+                }
+            });
+        });
+
+        // Load typing task content first
+        loadTypingContent();
+
+        // Check task status and load progress
+        checkTaskStatusAndLoadProgress();
+    });
+
+    function checkTaskStatusAndLoadProgress() {
+        // First check if task is already completed (but allow retakes)
+        const urlParams = new URLSearchParams(window.location.search);
+        const isRetake = urlParams.get('retake') === 'true';
+
+        if (!isRetake) {
+            // Only check completion status if not in retake mode
+            fetch('/api/user-tasks')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        const task = data.tasks.find(t => t.task_name === 'Typing Task');
+                        if (task && task.status === 'Completed') {
+                            alert('This task has already been completed. Redirecting to dashboard.');
+                            window.location.href = '/participant-dashboard';
+                            return;
+                        }
+                    }
+                })
+                .catch(() => {
+                    console.log('Could not check task status');
+                });
+        }
+
+        // Load saved typing progress (always check, even in retake mode)
+        fetch('/api/get-typing-progress?task_name=Typing Task')
+            .then(res => res.json())
+            .then(data => {
+                if (data.success && data.progress) {
+                    typingArea.value = data.progress.text || '';
+                    timer = parseInt(data.progress.timer) || 0;
+                    const min = String(Math.floor(timer / 60)).padStart(2, '0');
+                    const sec = String(timer % 60).padStart(2, '0');
+                    timerValue.textContent = `${min}:${sec}`;
+                    try {
+                        keystrokeLog = JSON.parse(data.progress.keystrokes) || [];
+                    } catch (e) {
+                        keystrokeLog = [];
+                    }
+                    if (data.progress.text) {
+                        uploadMsg.textContent = 'Saved progress loaded successfully!';
+                        uploadMsg.classList.remove('hidden', 'text-red-600');
+                        uploadMsg.classList.add('text-green-600');
+                        setTimeout(() => {
+                            uploadMsg.classList.add('hidden');
+                        }, 3000);
+                    }
+                }
+            })
+            .catch(() => {
+                console.log('Could not load saved progress');
+            });
+    }
+
+    function loadTypingContent() {
+        // Get task ID from URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        currentTaskId = urlParams.get('task_id');
+
+        if (!currentTaskId) {
+            showError('No task selected. Please go back and select a typing task.');
+            return;
+        }
+
+        // Fetch the typing task content
+        fetch(`/api/typing-task/${currentTaskId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    currentTask = data.task;
+                    displayTypingContent(data.task);
+                } else {
+                    showError('Failed to load typing task: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error loading typing task:', error);
+                showError('Failed to load typing task. Please try again.');
+            });
+    }
+
+    function displayTypingContent(task) {
+        const promptDiv = document.getElementById('typingPrompt');
+
+        // Update the title to show the task name
+        const titleElement = document.querySelector('h2');
+        if (titleElement) {
+            titleElement.textContent = task.task_name;
+        }
+
+        // Display the typing prompt
+        promptDiv.innerHTML = `
+            <div class="space-y-4">
+                <div class="bg-white p-4 rounded border border-gray-200">
+                    <h3 class="font-semibold text-gray-700 mb-2">Instructions:</h3>
+                    <p class="text-gray-600">${task.instructions}</p>
+                </div>
+                <div class="bg-white p-4 rounded border border-gray-200">
+                    <h3 class="font-semibold text-gray-700 mb-2">${task.task_name}</h3>
+                    <div class="text-gray-800 leading-relaxed whitespace-pre-wrap">${task.prompt}</div>
+                </div>
+                <div class="bg-gray-100 p-3 rounded text-sm text-gray-600">
+                    <strong>Word Limit:</strong> ${task.word_limit_min}-${task.word_limit_max} words | 
+                    <strong>Estimated Time:</strong> ${task.estimated_time} minutes
+                </div>
+            </div>
+        `;
+    }
+
+    function showError(message) {
+        const promptDiv = document.getElementById('typingPrompt');
+        promptDiv.innerHTML = `
+            <div class="text-center py-8">
+                <div class="text-red-600 text-6xl mb-4">⚠️</div>
+                <h3 class="text-xl font-bold text-red-800 mb-2">Error Loading Task</h3>
+                <p class="text-red-600 mb-4">${message}</p>
+                <button onclick="window.location.href='/task2.html'" 
+                        class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition">
+                    Back to Typing Tasks
+                </button>
+            </div>
+        `;
+    }
+
+    // Timer logic
+    function startTimer() {
+        if (timerInterval) return;
+        timerInterval = setInterval(() => {
+            timer++;
+            const min = String(Math.floor(timer / 60)).padStart(2, '0');
+            const sec = String(timer % 60).padStart(2, '0');
+            timerValue.textContent = `${min}:${sec}`;
+        }, 1000);
+    }
+    function stopTimer() {
+        clearInterval(timerInterval);
+        timerInterval = null;
+    }
+
+    // Keystroke logging
+    typingArea.addEventListener('keydown', function (e) {
+        if (!typingStarted) {
+            typingStarted = true;
+            startTimer();
+            lastTime = Date.now();
+
+            // Start Video Recording on first keypress
+            VideoRecorder.start();
+        }
+        const now = Date.now();
+        const timeDiff = lastTime ? now - lastTime : 0;
+        lastTime = now;
+        // Log key, position, and time
+        keystrokeLog.push({
+            key: e.key,
+            value: typingArea.value,
+            selectionStart: typingArea.selectionStart,
+            selectionEnd: typingArea.selectionEnd,
+            time: now,
+            timeDiff: timeDiff
+        });
+    });
+
+    // Save Progress
+    saveProgressBtn.addEventListener('click', function () {
+        if (submitted) return;
+        const text = typingArea.value;
+        const keystrokes = JSON.stringify(keystrokeLog);
+        const taskData = {
+            text,
+            keystrokes,
+            timer,
+            task_id: currentTaskId,
+            task_name: 'Typing Task'
+        };
+
+        fetch('/api/save-typing-progress', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(taskData)
+        })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    uploadMsg.textContent = 'Progress saved successfully! Redirecting to dashboard...';
+                    uploadMsg.classList.remove('hidden', 'text-red-600');
+                    uploadMsg.classList.add('text-green-600');
+                    // Redirect to dashboard after 2 seconds
+                    setTimeout(() => {
+                        window.location.href = '/participant-dashboard';
+                    }, 2000);
+                } else {
+                    uploadMsg.textContent = 'Save failed: ' + (data.message || 'Unknown error');
+                    uploadMsg.classList.remove('hidden', 'text-green-600');
+                    uploadMsg.classList.add('text-red-600');
+                }
+            })
+            .catch(() => {
+                uploadMsg.textContent = 'Save failed. Please try again.';
+                uploadMsg.classList.remove('hidden', 'text-green-600');
+                uploadMsg.classList.add('text-red-600');
+            });
+    });
+
+    // Submit
+    submitBtn.addEventListener('click', async function () {
+        if (submitted) return;
+        stopTimer();
+
+        // Stop Video Recording
+        if (currentTaskId) {
+            // We await this to ensure upload starts/finishes before page might redirect (though redirection is delayed by 2s later)
+            await VideoRecorder.stopAndUpload(currentTaskId, 'Typing Task');
+        }
+        const text = typingArea.value;
+        const keystrokes = JSON.stringify(keystrokeLog);
+        const taskData = {
+            text,
+            keystrokes,
+            timer,
+            task_id: currentTaskId,
+            task_name: 'Typing Task'
+        };
+
+        fetch('/api/submit-typing-task', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(taskData)
+        })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    uploadMsg.textContent = 'Task submitted successfully!';
+                    uploadMsg.classList.remove('hidden', 'text-red-600');
+                    uploadMsg.classList.add('text-green-600');
+                    submitted = true;
+                    typingArea.disabled = true;
+                    saveProgressBtn.disabled = true;
+                    submitBtn.disabled = true;
+
+                    // Trigger Feedback Modal
+                    showFeedbackModal('Typing Task', () => {
+                        completionButtons.classList.remove('hidden');
+                    });
+                } else {
+                    uploadMsg.textContent = 'Submit failed: ' + (data.message || 'Unknown error');
+                    uploadMsg.classList.remove('hidden', 'text-green-600');
+                    uploadMsg.classList.add('text-red-600');
+                }
+            })
+            .catch(() => {
+                uploadMsg.textContent = 'Submit failed. Please try again.';
+                uploadMsg.classList.remove('hidden', 'text-green-600');
+                uploadMsg.classList.add('text-red-600');
+            });
+    });
+
+    // Dashboard button
+    document.getElementById('dashboardBtn').addEventListener('click', function () {
+        window.location.href = '/participant-dashboard';
+    });
+</script>
+{% endblock %}
+{% block footer %}{% endblock %}

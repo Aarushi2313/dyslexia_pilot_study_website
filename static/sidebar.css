@@ -1,0 +1,220 @@
+/* Sidebar Styles */
+:root {
+    --sidebar-width: 260px;
+    --sidebar-bg: #1A237E;
+    --sidebar-text: #ffffff;
+    --sidebar-hover: #304FFE;
+    /* Lighter blue */
+    --sidebar-active: #3949AB;
+    /* Medium blue */
+    --header-height: 64px;
+}
+
+/* Main Layout Wrapper */
+.dashboard-container {
+    display: flex;
+    min-height: 100vh;
+}
+
+/* Sidebar Container */
+.sidebar {
+    width: var(--sidebar-width);
+    background-color: var(--sidebar-bg);
+    color: var(--sidebar-text);
+    height: 100vh;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 1000;
+    overflow-y: auto;
+    transition: transform 0.3s ease;
+    display: flex;
+    flex-direction: column;
+}
+
+.sidebar-header {
+    padding: 1.5rem;
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    height: var(--header-height);
+}
+
+.sidebar-logo {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    margin-right: 12px;
+}
+
+.sidebar-title {
+    font-size: 1.25rem;
+    font-weight: bold;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Navigation Links */
+.sidebar-nav {
+    padding: 1rem 0;
+    flex: 1;
+}
+
+.nav-item {
+    list-style: none;
+}
+
+.nav-link {
+    display: flex;
+    align-items: center;
+    padding: 12px 24px;
+    color: rgba(255, 255, 255, 0.8);
+    text-decoration: none;
+    transition: all 0.2s;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.nav-link:hover {
+    background-color: var(--sidebar-hover);
+    color: white;
+}
+
+.nav-link.active {
+    background-color: var(--sidebar-active);
+    color: white;
+    border-left: 4px solid #FFC107;
+    /* Amber accent */
+}
+
+.nav-icon {
+    margin-right: 12px;
+    width: 20px;
+    height: 20px;
+}
+
+/* Accordion Styles */
+.nav-group-header {
+    justify-content: space-between;
+}
+
+.dropdown-icon {
+    transition: transform 0.3s ease;
+}
+
+.nav-item.expanded .dropdown-icon {
+    transform: rotate(180deg);
+}
+
+.nav-sub-group {
+    background-color: rgba(0, 0, 0, 0.2);
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease-out;
+}
+
+.nav-item.expanded .nav-sub-group {
+    max-height: 500px;
+    /* Arbitrary large height */
+    transition: max-height 0.5s ease-in;
+}
+
+.sub-nav-link {
+    padding: 10px 24px 10px 56px;
+    /* Indented */
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.7);
+    display: block;
+}
+
+.sub-nav-link:hover {
+    color: white;
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.sub-nav-link.active {
+    color: #FFC107;
+}
+
+/* Main Content Adjustment */
+.main-content-wrapper {
+    margin-left: var(--sidebar-width);
+    flex: 1;
+    width: calc(100% - var(--sidebar-width));
+    transition: margin-left 0.3s ease, width 0.3s ease;
+}
+
+
+/* Collapsed Sidebar */
+.sidebar.collapsed {
+    width: 80px;
+}
+
+.sidebar.collapsed .sidebar-title-text,
+.sidebar.collapsed .nav-text,
+.sidebar.collapsed .dropdown-icon {
+    display: none;
+}
+
+.sidebar.collapsed .nav-link {
+    justify-content: center;
+    padding: 12px;
+}
+
+.sidebar.collapsed .nav-icon {
+    margin-right: 0;
+}
+
+.sidebar.collapsed .nav-group-header {
+    justify-content: center;
+}
+
+.sidebar.collapsed .nav-sub-group {
+    display: none;
+    /* Hide sub-menus when collapsed */
+}
+
+/* Main Content Adjustment for Collapsed Sidebar */
+.main-content-wrapper.expanded {
+    margin-left: 80px;
+    width: calc(100% - 80px);
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+    .sidebar {
+        transform: translateX(-100%);
+    }
+
+    .sidebar.open {
+        transform: translateX(0);
+        box-shadow: 4px 0 10px rgba(0, 0, 0, 0.3);
+    }
+
+    .main-content-wrapper {
+        margin-left: 0;
+        width: 100%;
+    }
+
+    .main-content-wrapper.expanded {
+        margin-left: 0;
+        width: 100%;
+    }
+
+    /* Mobile Overlay */
+    .sidebar-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 999;
+    }
+
+    .sidebar-overlay.active {
+        display: block;
+    }
+}

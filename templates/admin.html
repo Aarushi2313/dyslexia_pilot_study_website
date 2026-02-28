@@ -1,0 +1,2517 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Dyslexia Research Study</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='landing_style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body class="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50 text-gray-900">
+    <!-- Header -->
+    <header class="primary-bg text-white py-4 md:py-5 shadow-lg sticky top-0 z-40 backdrop-blur bg-[#1A237E]">
+        <div class="content-wrapper flex justify-between items-center max-w-7xl mx-auto px-4 md:px-6">
+            <div class="flex items-center flex-1 min-w-0">
+                <img src="{{ url_for('static', filename='admin.jpg') }}" alt="Research Study"
+                    class="h-10 w-10 md:h-12 md:w-12 rounded-full mr-2 md:mr-4 object-cover flex-shrink-0">
+                <h1 class="text-base sm:text-lg md:text-xl lg:text-2xl font-bold truncate">Research Admin Portal</h1>
+            </div>
+            <nav>
+                <ul class="flex space-x-2 sm:space-x-4 md:space-x-6 text-sm sm:text-base md:text-lg items-center">
+                    <li class="hidden sm:block"><a href="{{ url_for('landing') }}"
+                            class="hover:text-yellow-100 transition">Home</a></li>
+                    <li><a href="#" id="logoutBtn"
+                            class="hover:text-yellow-100 transition bg-red-600 px-2 py-1 sm:px-3 sm:py-2 md:px-4 md:py-2 rounded text-sm sm:text-base">Logout</a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="py-4 sm:py-6 md:py-8">
+        <div class="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 flex flex-col lg:flex-row gap-4 sm:gap-5 md:gap-6">
+            <!-- Left: KPIs + Charts in a compact scrollable column -->
+            <section class="lg:w-2/5 space-y-6">
+                <!-- Dashboard Overview -->
+                <div class="grid grid-cols-2 gap-3 sm:gap-4">
+                    <div
+                        class="bg-white/90 backdrop-blur p-3 sm:p-4 rounded-xl sm:rounded-2xl shadow border border-blue-100">
+                        <div class="flex items-center">
+                            <div class="p-2 bg-blue-100 rounded-lg mr-3">
+                                <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4">
+                                    </path>
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 class="text-xs font-semibold tracking-wide text-gray-500 uppercase">Total Schools
+                                </h3>
+                                <p class="mt-1 text-2xl font-bold text-blue-600" id="totalSchools">0</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-white/90 backdrop-blur p-4 rounded-2xl shadow border border-emerald-100">
+                        <div class="flex items-center">
+                            <div class="p-2 bg-emerald-50 rounded-lg mr-3">
+                                <svg class="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z">
+                                    </path>
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 class="text-xs font-semibold tracking-wide text-gray-500 uppercase">Total Students
+                                </h3>
+                                <p class="mt-1 text-2xl font-bold text-emerald-600" id="totalStudents">0</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-white/90 backdrop-blur p-4 rounded-2xl shadow border border-amber-100">
+                        <div class="flex items-center">
+                            <div class="p-2 bg-amber-50 rounded-lg mr-3">
+                                <svg class="w-5 h-5 text-amber-500" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 class="text-xs font-semibold tracking-wide text-gray-500 uppercase">Active Students
+                                </h3>
+                                <p class="mt-1 text-2xl font-bold text-amber-600" id="activeStudents">0</p>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- <div class="bg-white/90 backdrop-blur p-4 rounded-2xl shadow border border-violet-100">
+                <div class="flex items-center">
+                    <div class="p-2 bg-violet-50 rounded-lg mr-3">
+                        <svg class="w-5 h-5 text-violet-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="text-xs font-semibold tracking-wide text-gray-500 uppercase">Avg. Completion</h3>
+                        <p class="mt-1 text-2xl font-bold text-violet-600" id="avgCompletion">0%</p>
+                    </div>
+                </div>
+            </div> -->
+                    <div class="bg-white/90 backdrop-blur p-4 rounded-2xl shadow border border-indigo-100">
+                        <div class="flex items-center">
+                            <div class="p-2 bg-indigo-100 rounded-lg mr-3">
+                                <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z">
+                                    </path>
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 class="text-xs font-semibold tracking-wide text-gray-500 uppercase">Total Parents
+                                </h3>
+                                <p class="mt-1 text-2xl font-bold text-indigo-600" id="totalParents">0</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white/90 backdrop-blur p-4 rounded-2xl shadow border border-teal-100">
+                        <div class="flex items-center">
+                            <div class="p-2 bg-teal-100 rounded-lg mr-3">
+                                <svg class="w-6 h-6 text-teal-600" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01">
+                                    </path>
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 class="text-xs font-semibold tracking-wide text-gray-500 uppercase">Tasks Completed
+                                </h3>
+                                <p class="mt-1 text-2xl font-bold text-teal-600" id="tasksCompleted">0</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Additional Statistics Cards -->
+                <div class="grid grid-cols-2 gap-4">
+                    <!-- <div class="bg-white/90 backdrop-blur p-4 rounded-2xl shadow border border-indigo-100">
+                <div class="flex items-center">
+                    <div class="p-2 bg-indigo-100 rounded-lg mr-3">
+                        <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="text-xs font-semibold tracking-wide text-gray-500 uppercase">Total Parents</h3>
+                        <p class="mt-1 text-2xl font-bold text-indigo-600" id="totalParents">0</p>
+                    </div>
+                </div>
+            </div> -->
+                    <!-- 
+            <div class="bg-white/90 backdrop-blur p-4 rounded-2xl shadow border border-teal-100">
+                <div class="flex items-center">
+                    <div class="p-2 bg-teal-100 rounded-lg mr-3">
+                        <svg class="w-6 h-6 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="text-xs font-semibold tracking-wide text-gray-500 uppercase">Tasks Completed</h3>
+                        <p class="mt-1 text-2xl font-bold text-teal-600" id="tasksCompleted">0</p>
+                    </div>
+                </div>
+            </div> -->
+                    <!-- <div class="bg-white/90 backdrop-blur p-4 rounded-2xl shadow border border-pink-100">
+                <div class="flex items-center">
+                    <div class="p-2 bg-pink-100 rounded-lg mr-3">
+                        <svg class="w-6 h-6 text-pink-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="text-xs font-semibold tracking-wide text-gray-500 uppercase">Recent Activity</h3>
+                        <p class="mt-1 text-2xl font-bold text-pink-600" id="recentActivity">0</p>
+                    </div>
+                </div>
+            </div> -->
+                </div>
+
+                <!-- System Overview Charts (compact, scrollable) -->
+                <div class="space-y-3 sm:space-y-4 max-h-[420px] overflow-y-auto pr-1 sm:pr-2 custom-scrollbar">
+                    <div
+                        class="bg-white/90 backdrop-blur p-3 sm:p-4 rounded-xl sm:rounded-2xl shadow border border-gray-200">
+                        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-0 mb-2">
+                            <h3 class="text-xs sm:text-sm font-semibold text-gray-800">School Performance</h3>
+                            <span class="text-[10px] sm:text-[11px] uppercase tracking-wide text-gray-400">Schools vs
+                                active students</span>
+                        </div>
+                        <div class="h-48 sm:h-52 md:h-56">
+                            <canvas id="schoolPerformanceChart" class="w-full h-full"></canvas>
+                        </div>
+                    </div>
+                    <div
+                        class="bg-white/90 backdrop-blur p-3 sm:p-4 rounded-xl sm:rounded-2xl shadow border border-gray-200">
+                        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-0 mb-2">
+                            <h3 class="text-xs sm:text-sm font-semibold text-gray-800">Task Completion Rates</h3>
+                            <span class="text-[10px] sm:text-[11px] uppercase tracking-wide text-gray-400">Across all
+                                tasks</span>
+                        </div>
+                        <div class="h-48 sm:h-52 md:h-56">
+                            <canvas id="taskCompletionChart" class="w-full h-full"></canvas>
+                        </div>
+                    </div>
+                    <!-- <div class="bg-white/90 backdrop-blur p-4 rounded-2xl shadow border border-gray-200">
+                <div class="flex items-center justify-between mb-2">
+                    <h3 class="text-sm font-semibold text-gray-800">Class Distribution</h3>
+                    <span class="text-[11px] uppercase tracking-wide text-gray-400">Students per class</span>
+                </div>
+                <div class="h-56">
+                    <canvas id="classDistributionChart" class="w-full h-full"></canvas>
+                </div>
+            </div> -->
+                    <!-- <div class="bg-white/90 backdrop-blur p-4 rounded-2xl shadow border border-gray-200">
+                <div class="flex items-center justify-between mb-2">
+                    <h3 class="text-sm font-semibold text-gray-800">Recent Activity (30 Days)</h3>
+                    <span class="text-[11px] uppercase tracking-wide text-gray-400">Updates & completions</span>
+                </div>
+                <div class="h-56">
+                    <canvas id="recentActivityChart" class="w-full h-full"></canvas>
+                </div>
+            </div> -->
+                </div>
+            </section>
+
+            <!-- Right: Tabbed management area with its own scroll -->
+            <section class="lg:w-3/5">
+                <!-- Navigation Tabs -->
+                <div class="bg-white rounded-xl sm:rounded-2xl shadow-lg border border-gray-200">
+                    <div
+                        class="border-b border-gray-200 sticky top-[4.5rem] lg:top-0 bg-white/95 z-30 rounded-t-xl sm:rounded-t-2xl">
+                        <nav class="flex flex-wrap gap-2 sm:gap-3 md:gap-4 px-3 sm:px-4 md:px-6 pt-2 sm:pt-3"
+                            aria-label="Tabs">
+                            <button
+                                class="tab-button active py-2 sm:py-3 px-1 border-b-2 border-blue-500 text-blue-700 font-medium text-xs sm:text-sm"
+                                data-tab="users">
+                                User Management
+                            </button>
+                            <!-- <button class="tab-button py-2 sm:py-3 px-1 border-b-2 border-transparent text-gray-500 hover:text-gray-800 font-medium text-xs sm:text-sm" data-tab="data">
+                        Data Monitoring
+                    </button> -->
+                            <button
+                                class="tab-button py-2 sm:py-3 px-1 border-b-2 border-transparent text-gray-500 hover:text-gray-800 font-medium text-xs sm:text-sm"
+                                data-tab="export">
+                                <span class="hidden sm:inline">Dataset </span>Export
+                            </button>
+                            <button
+                                class="tab-button py-2 sm:py-3 px-1 border-b-2 border-transparent text-gray-500 hover:text-gray-800 font-medium text-xs sm:text-sm"
+                                data-tab="tasks">
+                                <span class="hidden sm:inline">Task </span>Management
+                            </button>
+                            <button
+                                class="tab-button py-2 sm:py-3 px-1 border-b-2 border-transparent text-gray-500 hover:text-gray-800 font-medium text-xs sm:text-sm"
+                                School Suggestions </button>
+                                <button
+                                    class="tab-button py-2 sm:py-3 px-1 border-b-2 border-transparent text-gray-500 hover:text-gray-800 font-medium text-xs sm:text-sm"
+                                    data-tab="feedback">
+                                    User Feedback
+                                </button>
+                                <button
+                                    class="tab-button py-2 sm:py-3 px-1 border-b-2 border-transparent text-gray-500 hover:text-gray-800 font-medium text-xs sm:text-sm"
+                                    data-tab="inquiries">
+                                    Inquiries
+                                </button>
+                        </nav>
+                    </div>
+
+                    <!-- Tab Content -->
+                    <div class="p-3 sm:p-4 md:p-6 max-h-[calc(100vh-210px)] overflow-y-auto custom-scrollbar">
+                        <!-- User Management Tab -->
+                        <div id="users-tab" class="tab-content active">
+                            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+                                <div>
+                                    <h2 class="text-lg sm:text-xl font-semibold text-gray-900">User Management</h2>
+                                    <p class="text-xs sm:text-sm text-gray-500 mt-1">Quickly browse and manage
+                                        participants, parents, and schools.</p>
+                                </div>
+                                <!-- Search and Filter -->
+                                <div class="flex flex-col sm:flex-row flex-wrap gap-2 w-full sm:w-auto">
+                                    <div class="relative w-full sm:w-auto">
+                                        <span class="absolute inset-y-0 left-3 flex items-center text-gray-400">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M21 21l-4.35-4.35M5 11a6 6 0 1112 0 6 6 0 01-12 0z" />
+                                            </svg>
+                                        </span>
+                                        <input type="text" id="userSearch" placeholder="Search by name or email"
+                                            class="pl-9 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm text-gray-900 placeholder:text-gray-400 w-full">
+                                    </div>
+                                    <button id="searchBtn"
+                                        class="inline-flex items-center justify-center bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-500 shadow-sm w-full sm:w-auto">
+                                        Search
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- User sub-tabs -->
+                            <div class="mb-4 border-b border-gray-200">
+                                <nav class="flex flex-wrap gap-2 sm:gap-3 md:gap-4" aria-label="User subsections">
+                                    <button
+                                        class="user-subtab-button border-b-2 border-blue-500 text-blue-700 pb-2 sm:pb-3 text-xs sm:text-sm font-medium"
+                                        data-subtab="children">
+                                        Children
+                                    </button>
+                                    <button
+                                        class="user-subtab-button border-b-2 border-transparent text-gray-500 hover:text-gray-800 pb-2 sm:pb-3 text-xs sm:text-sm font-medium"
+                                        data-subtab="parents">
+                                        Parents
+                                    </button>
+                                    <button
+                                        class="user-subtab-button border-b-2 border-transparent text-gray-500 hover:text-gray-800 pb-2 sm:pb-3 text-xs sm:text-sm font-medium"
+                                        data-subtab="schools">
+                                        Schools
+                                    </button>
+                                    <button
+                                        class="user-subtab-button border-b-2 border-transparent text-gray-500 hover:text-gray-800 pb-2 sm:pb-3 text-xs sm:text-sm font-medium"
+                                        data-subtab="hierarchy">
+                                        Hierarchy View
+                                    </button>
+                                </nav>
+                            </div>
+
+                            <div class="space-y-6">
+                                <!-- Children -->
+                                <div id="users-subtab-children" class="user-subtab-content">
+                                    <div
+                                        class="bg-white/90 backdrop-blur rounded-xl shadow-sm border border-gray-200 p-4">
+                                        <div class="flex items-center justify-between mb-3">
+                                            <h3 class="text-base font-semibold text-gray-900">Children</h3>
+                                            <span class="text-xs text-gray-500">Progress and task status at a
+                                                glance</span>
+                                        </div>
+                                        <div class="overflow-x-auto max-h-72 custom-scrollbar">
+                                            <table
+                                                class="min-w-full bg-white border border-gray-200 rounded-lg text-xs">
+                                                <thead class="bg-gray-50">
+                                                    <tr>
+                                                        <th
+                                                            class="px-3 py-2 text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider">
+                                                            ID</th>
+                                                        <th
+                                                            class="px-3 py-2 text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider">
+                                                            Name</th>
+                                                        <th
+                                                            class="px-3 py-2 text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider">
+                                                            Email</th>
+                                                        <th
+                                                            class="px-3 py-2 text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider">
+                                                            Age</th>
+                                                        <th
+                                                            class="px-3 py-2 text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider">
+                                                            Dyslexia Status</th>
+                                                        <th
+                                                            class="px-3 py-2 text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider">
+                                                            Progress</th>
+                                                        <th
+                                                            class="px-3 py-2 text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider">
+                                                            Task Status</th>
+                                                        <th
+                                                            class="px-3 py-2 text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider">
+                                                            Actions</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="childrenTableBody" class="bg-white divide-y divide-gray-200">
+                                                    <!-- Children data here -->
+                                                </tbody>
+                                                <tbody id="childrenLoadingState" class="bg-white">
+                                                    <tr>
+                                                        <td colspan="8" class="px-6 py-8 text-center">
+                                                            <div class="flex flex-col items-center justify-center">
+                                                                <div
+                                                                    class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-2">
+                                                                </div>
+                                                                <p class="text-sm text-gray-500">Loading children...</p>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Parents -->
+                                <div id="users-subtab-parents" class="user-subtab-content hidden">
+                                    <div
+                                        class="bg-white/90 backdrop-blur rounded-xl shadow-sm border border-gray-200 p-4">
+                                        <div class="flex items-center justify-between mb-3">
+                                            <h3 class="text-base font-semibold text-gray-900">Parents</h3>
+                                            <span class="text-xs text-gray-500">Contact and manage participating
+                                                parents</span>
+                                        </div>
+                                        <div class="overflow-x-auto max-h-60 custom-scrollbar">
+                                            <table
+                                                class="min-w-full bg-white border border-gray-200 rounded-lg text-xs">
+                                                <thead class="bg-gray-50">
+                                                    <tr>
+                                                        <th
+                                                            class="px-3 py-2 text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider">
+                                                            ID</th>
+                                                        <th
+                                                            class="px-3 py-2 text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider">
+                                                            Name</th>
+                                                        <th
+                                                            class="px-3 py-2 text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider">
+                                                            Email</th>
+                                                        <th
+                                                            class="px-3 py-2 text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider">
+                                                            Actions</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="parentsTableBody" class="bg-white divide-y divide-gray-200">
+                                                    <!-- Parents data here -->
+                                                </tbody>
+                                                <tbody id="parentsLoadingState" class="bg-white">
+                                                    <tr>
+                                                        <td colspan="4" class="px-6 py-8 text-center">
+                                                            <div class="flex flex-col items-center justify-center">
+                                                                <div
+                                                                    class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-2">
+                                                                </div>
+                                                                <p class="text-sm text-gray-500">Loading parents...</p>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Schools -->
+                                <div id="users-subtab-schools" class="user-subtab-content hidden">
+                                    <div
+                                        class="bg-white/90 backdrop-blur rounded-xl shadow-sm border border-gray-200 p-4">
+                                        <div class="flex items-center justify-between mb-3">
+                                            <h3 class="text-base font-semibold text-gray-900">Schools</h3>
+                                            <span class="text-xs text-gray-500">Overview of partner institutions</span>
+                                        </div>
+                                        <div class="overflow-x-auto max-h-72 custom-scrollbar">
+                                            <table
+                                                class="min-w-full bg-white border border-gray-200 rounded-lg text-xs">
+                                                <thead class="bg-gray-50">
+                                                    <tr>
+                                                        <th
+                                                            class="px-3 py-2 text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider">
+                                                            ID</th>
+                                                        <th
+                                                            class="px-3 py-2 text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider">
+                                                            Name</th>
+                                                        <th
+                                                            class="px-3 py-2 text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider">
+                                                            Email</th>
+                                                        <th
+                                                            class="px-3 py-2 text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider">
+                                                            No. of Parents</th>
+                                                        <th
+                                                            class="px-3 py-2 text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider">
+                                                            No. of Children</th>
+                                                        <th
+                                                            class="px-3 py-2 text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider">
+                                                            No. of Assessments Completed</th>
+                                                        <th
+                                                            class="px-3 py-2 text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider">
+                                                            Phone</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="schoolsTableBody" class="bg-white divide-y divide-gray-200">
+                                                    <!-- Schools data here -->
+                                                </tbody>
+                                                <tbody id="schoolsLoadingState" class="bg-white">
+                                                    <tr>
+                                                        <td colspan="8" class="px-6 py-8 text-center">
+                                                            <div class="flex flex-col items-center justify-center">
+                                                                <div
+                                                                    class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-2">
+                                                                </div>
+                                                                <p class="text-sm text-gray-500">Loading schools...</p>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Hierarchy View -->
+                                <div id="users-subtab-hierarchy" class="user-subtab-content hidden">
+                                    <div
+                                        class="bg-white/90 backdrop-blur rounded-xl shadow-sm border border-gray-200 p-4">
+                                        <div class="flex items-center justify-between mb-3">
+                                            <h3 class="text-base font-semibold text-gray-900">Hierarchy View</h3>
+                                            <span class="text-xs text-gray-500">Visual map of schools, classes,
+                                                sections, and users</span>
+                                        </div>
+                                        <div
+                                            class="grid grid-cols-1 lg:grid-cols-2 gap-4 max-h-80 overflow-y-auto custom-scrollbar">
+                                            <div>
+                                                <h4
+                                                    class="text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wide">
+                                                    Schools &amp; Classes</h4>
+                                                <div id="hierarchyContainer"
+                                                    class="space-y-4 max-h-[480px] overflow-y-auto pr-2 custom-scrollbar">
+                                                    <!-- Hierarchy content -->
+                                                </div>
+                                                <div id="hierarchyLoadingState"
+                                                    class="hidden flex flex-col items-center justify-center py-12">
+                                                    <div
+                                                        class="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mb-3">
+                                                    </div>
+                                                    <p class="text-sm text-gray-500">Loading hierarchy...</p>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <h4
+                                                    class="text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wide">
+                                                    Unassigned (Non-school)</h4>
+                                                <div id="unassignedContainer"
+                                                    class="space-y-2 max-h-[480px] overflow-y-auto pr-2 custom-scrollbar">
+                                                    <!-- Unassigned content -->
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Data Monitoring Tab -->
+                        <div id="data-tab" class="tab-content hidden">
+                            <h2 class="text-xl font-semibold text-gray-900 mb-4">Data Collection Monitoring</h2>
+
+                            <!-- Charts Row -->
+                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+                                <div class="bg-white/90 p-4 rounded-xl shadow border border-gray-200">
+                                    <h3 class="text-sm font-semibold text-gray-900 mb-3">Task Completion Rates</h3>
+                                    <canvas id="taskCompletionChart" width="400" height="180"></canvas>
+                                </div>
+                                <div class="bg-white/90 p-4 rounded-xl shadow border border-gray-200">
+                                    <h3 class="text-sm font-semibold text-gray-900 mb-3">Data Quality Metrics</h3>
+                                    <canvas id="dataQualityChart" width="400" height="200"></canvas>
+                                </div>
+                            </div>
+
+                            <!-- Data Quality Indicators -->
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                                <div class="bg-white/90 p-4 rounded-xl shadow border border-gray-200">
+                                    <h4 class="font-semibold text-gray-900 mb-2 text-sm">Audio Quality</h4>
+                                    <div class="flex items-center">
+                                        <div class="flex-1 bg-gray-200 rounded-full h-2 mr-3">
+                                            <div class="bg-green-500 h-2 rounded-full" id="audioQualityBar"
+                                                style="width: 0%"></div>
+                                        </div>
+                                        <span class="text-sm font-medium text-gray-600" id="audioQualityText">0%</span>
+                                    </div>
+                                </div>
+                                <div class="bg-white/90 p-4 rounded-xl shadow border border-gray-200">
+                                    <h4 class="font-semibold text-gray-900 mb-2 text-sm">Response Completeness</h4>
+                                    <div class="flex items-center">
+                                        <div class="flex-1 bg-gray-200 rounded-full h-2 mr-3">
+                                            <div class="bg-blue-500 h-2 rounded-full" id="responseCompletenessBar"
+                                                style="width: 0%"></div>
+                                        </div>
+                                        <span class="text-sm font-medium text-gray-600"
+                                            id="responseCompletenessText">0%</span>
+                                    </div>
+                                </div>
+                                <div class="bg-white/90 p-4 rounded-xl shadow border border-gray-200">
+                                    <h4 class="font-semibold text-gray-900 mb-2 text-sm">Data Consistency</h4>
+                                    <div class="flex items-center">
+                                        <div class="flex-1 bg-gray-200 rounded-full h-2 mr-3">
+                                            <div class="bg-yellow-500 h-2 rounded-full" id="dataConsistencyBar"
+                                                style="width: 0%"></div>
+                                        </div>
+                                        <span class="text-sm font-medium text-gray-600"
+                                            id="dataConsistencyText">0%</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Recent Activity -->
+                            <div class="bg-white/90 p-4 rounded-xl shadow border border-gray-200">
+                                <h3 class="text-sm font-semibold text-gray-900 mb-3">Recent Data Collection Activity
+                                </h3>
+                                <div id="recentActivity" class="space-y-3 max-h-72 overflow-y-auto custom-scrollbar">
+                                    <!-- Activity items will be populated here -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Dataset Export Tab -->
+                        <div id="export-tab" class="tab-content hidden">
+                            <h2 class="text-xl font-semibold text-gray-900 mb-4">Secure Dataset Export</h2>
+
+                            <!-- Export Options -->
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                                <div class="bg-white/90 p-4 rounded-xl shadow border border-gray-200">
+                                    <h3 class="text-sm font-semibold text-gray-900 mb-3">Export Configuration</h3>
+                                    <div class="space-y-4">
+                                        <div>
+                                            <label
+                                                class="block text-xs font-medium text-gray-600 mb-2 uppercase tracking-wide">Data
+                                                Format</label>
+                                            <select id="exportFormat"
+                                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white text-sm">
+                                                <option value="csv">CSV</option>
+                                                <option value="json">JSON</option>
+                                                <option value="excel">Excel</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label
+                                                class="block text-xs font-medium text-gray-600 mb-2 uppercase tracking-wide">Anonymization
+                                                Level</label>
+                                            <select id="anonymizationLevel"
+                                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white text-sm">
+                                                <option value="full">Full Anonymization</option>
+                                                <option value="partial">Partial Anonymization</option>
+                                                <option value="none">No Anonymization (Admin Only)</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label
+                                                class="block text-xs font-medium text-gray-600 mb-2 uppercase tracking-wide">Date
+                                                Range</label>
+                                            <div class="flex space-x-2">
+                                                <input type="date" id="startDate"
+                                                    class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white text-sm">
+                                                <input type="date" id="endDate"
+                                                    class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white text-sm">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="bg-white/90 p-4 rounded-xl shadow border border-gray-200">
+                                    <h3 class="text-sm font-semibold text-gray-900 mb-3">Data Selection</h3>
+                                    <div class="space-y-3">
+                                        <label class="flex items-center">
+                                            <input type="checkbox" id="includeDemographics" class="mr-3" checked>
+                                            <span class="text-sm text-gray-800">Demographics Data</span>
+                                        </label>
+                                        <label class="flex items-center">
+                                            <input type="checkbox" id="includeAudio" class="mr-3" checked>
+                                            <span class="text-sm text-gray-800">Audio Recordings</span>
+                                        </label>
+                                        <label class="flex items-center">
+                                            <input type="checkbox" id="includeTyping" class="mr-3" checked>
+                                            <span class="text-sm text-gray-800">Typing Task Data</span>
+                                        </label>
+                                        <label class="flex items-center">
+                                            <input type="checkbox" id="includeComprehension" class="mr-3" checked>
+                                            <span class="text-sm text-gray-800">Comprehension Responses</span>
+                                        </label>
+                                        <label class="flex items-center">
+                                            <input type="checkbox" id="includeProgress" class="mr-3" checked>
+                                            <span class="text-sm text-gray-800">Task Progress Data</span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Export Actions -->
+                            <div class="bg-white/90 p-4 rounded-xl shadow border border-gray-200">
+                                <div class="flex flex-wrap gap-4">
+                                    <button onclick="exportDataset()"
+                                        class="bg-emerald-600 text-white px-5 py-2 rounded-lg hover:bg-emerald-500 font-medium text-sm">
+                                        Export Dataset
+                                    </button>
+                                    <button onclick="previewExport()"
+                                        class="bg-blue-600 text-white px-5 py-2 rounded-lg hover:bg-blue-500 font-medium text-sm">
+                                        Preview Export
+                                    </button>
+                                    <button onclick="scheduleExport()"
+                                        class="bg-violet-600 text-white px-5 py-2 rounded-lg hover:bg-violet-500 font-medium text-sm">
+                                        Schedule Recurring Export
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Task Management Tab -->
+                        <div id="tasks-tab" class="tab-content hidden">
+                            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+                                <div>
+                                    <h2 class="text-lg sm:text-xl font-semibold text-gray-900">Task Management</h2>
+                                    <p class="text-xs sm:text-sm text-gray-500">Review and manage all core study tasks.
+                                    </p>
+                                </div>
+                                <button onclick="addNewTask()"
+                                    class="hidden md:inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-500">
+                                    <span class="text-lg leading-none">＋</span>
+                                    <span>Add Task</span>
+                                </button>
+                            </div>
+
+                            <!-- Categories Grid -->
+                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                                <a href="{{ url_for('admin_tasks_by_category', category_slug='reading-aloud') }}"
+                                    class="block bg-white p-4 sm:p-5 md:p-6 rounded-lg shadow-md hover:shadow-lg border border-gray-200 transition">
+                                    <h3 class="text-base sm:text-lg font-semibold text-gray-800">Reading Aloud</h3>
+                                    <p class="text-xs sm:text-sm text-gray-600 mt-1">View tasks grouped by age bands</p>
+                                </a>
+                                <a href="{{ url_for('admin_tasks_by_category', category_slug='typing') }}"
+                                    class="block bg-white p-4 sm:p-5 md:p-6 rounded-lg shadow-md hover:shadow-lg border border-gray-200 transition">
+                                    <h3 class="text-base sm:text-lg font-semibold text-gray-800">Typing Task</h3>
+                                    <p class="text-xs sm:text-sm text-gray-600 mt-1">View tasks grouped by age bands</p>
+                                </a>
+                                <a href="{{ url_for('admin_tasks_by_category', category_slug='writing') }}"
+                                    class="block bg-white p-4 sm:p-5 md:p-6 rounded-lg shadow-md hover:shadow-lg border border-gray-200 transition">
+                                    <h3 class="text-base sm:text-lg font-semibold text-gray-800">Writing Task</h3>
+                                    <p class="text-xs sm:text-sm text-gray-600 mt-1">View tasks grouped by age bands</p>
+                                </a>
+                                <a href="{{ url_for('admin_tasks_by_category', category_slug='reading-comprehension') }}"
+                                    class="block bg-white p-4 sm:p-5 md:p-6 rounded-lg shadow-md hover:shadow-lg border border-gray-200 transition">
+                                    <h3 class="text-base sm:text-lg font-semibold text-gray-800">Reading Comprehension
+                                    </h3>
+                                    <p class="text-xs sm:text-sm text-gray-600 mt-1">View tasks grouped by age bands</p>
+                                </a>
+                                <a href="{{ url_for('admin_tasks_by_category', category_slug='mathematical-comprehension') }}"
+                                    class="block bg-white p-4 sm:p-5 md:p-6 rounded-lg shadow-md hover:shadow-lg border border-gray-200 transition">
+                                    <h3 class="text-base sm:text-lg font-semibold text-gray-800">Mathematical
+                                        Comprehension</h3>
+                                    <p class="text-xs sm:text-sm text-gray-600 mt-1">View tasks grouped by age bands</p>
+                                </a>
+                                <a href="{{ url_for('admin_tasks_by_category', category_slug='aptitude') }}"
+                                    class="block bg-white p-4 sm:p-5 md:p-6 rounded-lg shadow-md hover:shadow-lg border border-gray-200 transition">
+                                    <h3 class="text-lg font-semibold text-gray-800">Aptitude Test</h3>
+                                    <p class="text-sm text-gray-600 mt-1">View and edit aptitude task</p>
+                                </a>
+                            </div>
+                        </div>
+                        <!-- School Suggestions Tab -->
+                        <div id="suggestions-tab" class="tab-content hidden">
+                            <h2 class="text-lg sm:text-xl font-semibold text-gray-900 mb-4">Suggested Tasks by Schools
+                            </h2>
+                            <div id="suggestionsList"
+                                class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4"></div>
+                            <!-- Empty state message -->
+                            <div id="noSuggestionsMessage"
+                                class="hidden bg-white/90 backdrop-blur rounded-xl shadow-sm border border-gray-200 p-8 text-center">
+                                <svg class="mx-auto h-16 w-16 text-gray-300 mb-4" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01">
+                                    </path>
+                                </svg>
+                                <h3 class="text-lg font-semibold text-gray-700 mb-2">No Task Suggestions Yet</h3>
+                                <p class="text-gray-500 mb-4">Schools haven't submitted any task suggestions at this
+                                    time.</p>
+                                <p class="text-sm text-gray-400">Check back later or encourage schools to share their
+                                    task recommendations.</p>
+                            </div>
+                        </div>
+                        <!-- User Feedback Tab -->
+                        <div id="feedback-tab" class="tab-content hidden">
+                            <h2 class="text-lg sm:text-xl font-semibold text-gray-900 mb-4">User Feedback</h2>
+                            <div class="bg-white/90 backdrop-blur rounded-xl shadow-sm border border-gray-200 p-4">
+                                <div class="overflow-x-auto max-h-[600px] custom-scrollbar">
+                                    <table class="min-w-full bg-white border border-gray-200 rounded-lg text-sm">
+                                        <thead class="bg-gray-50">
+                                            <tr>
+                                                <th
+                                                    class="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">
+                                                    Date</th>
+                                                <th
+                                                    class="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">
+                                                    User</th>
+                                                <th
+                                                    class="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">
+                                                    Task</th>
+                                                <th
+                                                    class="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">
+                                                    Rating</th>
+                                                <th
+                                                    class="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">
+                                                    Comments</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="feedbackTableBody" class="divide-y divide-gray-200">
+                                            <!-- Feedback rows will be inserted here -->
+                                        </tbody>
+                                    </table>
+                                    <div id="feedbackLoading" class="hidden py-8 text-center text-gray-500">
+                                        Loading feedback...
+                                    </div>
+                                    <div id="noFeedbackMessage" class="hidden py-8 text-center text-gray-500">
+                                        No feedback submitted yet.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Inquiries Tab -->
+                        <div id="inquiries-tab" class="tab-content hidden">
+                            <h2 class="text-lg sm:text-xl font-semibold text-gray-900 mb-4">User Inquiries</h2>
+                            <div class="bg-white/90 backdrop-blur rounded-xl shadow-sm border border-gray-200 p-4">
+                                <div class="overflow-x-auto max-h-[600px] custom-scrollbar">
+                                    <table class="min-w-full bg-white border border-gray-200 rounded-lg text-sm">
+                                        <thead class="bg-gray-50">
+                                            <tr>
+                                                <th
+                                                    class="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">
+                                                    Date</th>
+                                                <th
+                                                    class="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">
+                                                    Name</th>
+                                                <th
+                                                    class="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">
+                                                    Email</th>
+                                                <th
+                                                    class="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">
+                                                    Subject</th>
+                                                <th
+                                                    class="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">
+                                                    Message</th>
+                                                <th
+                                                    class="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">
+                                                    Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="inquiriesTableBody" class="divide-y divide-gray-200">
+                                            <!-- Inquiries rows will be inserted here -->
+                                        </tbody>
+                                    </table>
+                                    <div id="inquiriesLoading" class="hidden py-8 text-center text-gray-500">
+                                        Loading inquiries...
+                                    </div>
+                                    <div id="noInquiriesMessage" class="hidden py-8 text-center text-gray-500">
+                                        No inquiries submitted yet.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer
+        class="dark-bg text-white py-8 sm:py-10 md:py-12 text-xs sm:text-sm md:text-base mt-6 sm:mt-8 border-t border-gray-300 bg-gray-900">
+        <div class="content-wrapper max-w-7xl mx-auto px-3 sm:px-4 md:px-6">
+            <div class="flex flex-col md:flex-row justify-between">
+                <div class="mb-8 md:mb-0">
+                    <div class="flex items-center">
+                        <h2 class="text-xl font-bold">Dyslexia Research Initiative</h2>
+                    </div>
+                    <p class="mt-4 text-gray-400 max-w-md">
+                        Advancing our understanding of dyslexia through innovative research and technology to create
+                        better support systems for everyone.
+                    </p>
+                </div>
+
+                <div class="grid grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 md:gap-8">
+                    <div>
+                        <h3 class="text-lg font-semibold mb-4">Quick Links</h3>
+                        <ul class="space-y-2">
+                            <li><a href="{{ url_for('landing') }}#about" ...>About</a></li>
+                            <li><a href="{{ url_for('landing') }}#contact" ...>Contact</a></li>
+                        </ul>
+                    </div>
+
+                    <div>
+                        <h3 class="text-lg font-semibold mb-4">Resources</h3>
+                        <ul class="space-y-2">
+                            <li><a href="{{ url_for('terms') }}" class="text-gray-400 hover:text-white transition">Terms
+                                    of Service</a></li>
+                            <li><a href="{{ url_for('privacy_policy') }}"
+                                    class="text-gray-400 hover:text-white transition">Privacy Policy</a></li>
+                        </ul>
+                    </div>
+
+                    <div>
+                        <h3 class="text-lg font-semibold mb-4">Connect</h3>
+                        <div class="flex space-x-4">
+                            <a href="#" class="text-gray-400 hover:text-white transition">
+                                <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"
+                                    xmlns="http://www.w3.org/2000/svg">
+                                    <path
+                                        d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z">
+                                    </path>
+                                </svg>
+                            </a>
+                            <a href="#" class="text-gray-400 hover:text-white transition">
+                                <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"
+                                    xmlns="http://www.w3.org/2000/svg">
+                                    <path fill-rule="evenodd"
+                                        d="M12.315 2c2.43 0 2.784.013 3.808.06 1.064.049 1.791.218 2.427.465a4.902 4.902 0 011.772 1.153 4.902 4.902 0 011.153 1.772c.247.636.416 1.363.465 2.427.048 1.067.06 1.407.06 4.123v.08c0 2.643-.012 2.987-.06 4.043-.049 1.064-.218 1.791-.465 2.427a4.902 4.902 0 01-1.153 1.772 4.902 4.902 0 01-1.772 1.153c-.636.247-1.363.416-2.427.465-1.067.048-1.407.06-4.123.06h-.08c-2.643 0-2.987-.012-4.043-.06-1.064-.049-1.791-.218-2.427-.465a4.902 4.902 0 01-1.772-1.153 4.902 4.902 0 01-1.153-1.772c-.247-.636-.416-1.363-.465-2.427-.047-1.024-.06-1.379-.06-3.808v-.63c0-2.43.013-2.784.06-3.808.049-1.064.218-1.791.465-2.427a4.902 4.902 0 011.153-1.772A4.902 4.902 0 015.45 2.525c.636-.247 1.363-.416 2.427-.465C8.901 2.013 9.256 2 11.685 2h.63zm-.081 1.802h-.468c-2.456 0-2.784.011-3.807.058-.975.045-1.504.207-1.857.344-.467.182-.8.398-1.15.748-.35.35-.566.683-.748 1.15-.137.353-.3.882-.344 1.857-.047 1.023-.058 1.351-.058 3.807v.468c0 2.456.011 2.784.058 3.807.045.975.207 1.504.344 1.857.182.466.399.8.748 1.15.35.35.683.566 1.15.748.353.137.882.3 1.857.344 1.054.048 1.37.058 4.041.058h.08c2.597 0 2.917-.01 3.96-.058.976-.045 1.505-.207 1.858-.344.466-.182.8-.398 1.15-.748.35-.35.566-.683.748-1.15.137-.353.3-.882.344-1.857.048-1.055.058-1.37.058-4.041v-.08c0-2.597-.01-2.917-.058-3.96-.045-.976-.207-1.505-.344-1.858a3.097 3.097 0 00-.748-1.15 3.098 3.098 0 00-1.15-.748c-.353-.137-.882-.3-1.857-.344-1.023-.047-1.351-.058-3.807-.058zM12 6.865a5.135 5.135 0 110 10.27 5.135 5.135 0 010-10.27zm0 1.802a3.333 3.333 0 100 6.666 3.333 3.333 0 000-6.666zm5.338-3.205a1.2 1.2 0 110 2.4 1.2 1.2 0 010-2.4z"
+                                        clip-rule="evenodd"></path>
+                                </svg>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div
+                class="mt-8 sm:mt-10 md:mt-12 pt-6 sm:pt-8 border-t border-gray-700 text-center text-gray-400 text-xs sm:text-sm">
+                <p>&copy; 2025 Leveraging NLP for Dyslexia Identification. All rights reserved.</p>
+            </div>
+        </div>
+
+    </footer>
+
+    <!-- Modal for User Details -->
+    <div id="userModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50">
+        <div class="flex items-center justify-center min-h-screen p-3 sm:p-4">
+            <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                <div class="p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-semibold text-gray-800">Participant Details</h3>
+                        <button onclick="closeUserModal()" class="text-gray-400 hover:text-gray-600">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </button>
+                    </div>
+                    <div id="userModalContent">
+                        <!-- User details will be populated here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add this modal at the end of your admin.html body -->
+    <div id="addTaskModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50">
+        <div class="flex items-center justify-center min-h-screen p-3 sm:p-4">
+            <div class="bg-white rounded-lg shadow-xl w-full max-w-lg max-h-[85vh] overflow-y-auto">
+                <div class="p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-semibold text-gray-800">Add New Task</h3>
+                        <button onclick="closeAddTaskModal()" class="text-gray-400 hover:text-gray-600">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </button>
+                    </div>
+                    <form id="addTaskForm" class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Task Name</label>
+                            <input type="text" id="newTaskName"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">One-line Description</label>
+                            <input type="text" id="newTaskDesc"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Instructions</label>
+                            <textarea id="newTaskInstructions"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg" required></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Estimated Time (minutes)</label>
+                            <input type="number" id="newTaskTime"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Devices Required</label>
+                            <input type="text" id="newTaskDevices"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Example</label>
+                            <textarea id="newTaskExample" class="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                                required></textarea>
+                        </div>
+
+                        <!-- Add this to your addTaskForm in admin.html -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Main Content (HTML
+                                allowed)</label>
+                            <textarea id="newTaskMainContent" class="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                                required></textarea>
+                        </div>
+                        <div class="flex justify-end">
+                            <button type="button" onclick="closeAddTaskModal()"
+                                class="mr-3 px-4 py-2 rounded bg-gray-200 hover:bg-gray-300 text-gray-700">Cancel</button>
+                            <button type="submit" class="px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 text-white">Add
+                                Task</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Task Management Modal for Children -->
+    <div id="taskManagementModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50">
+        <div class="flex items-center justify-center min-h-screen p-3 sm:p-4">
+            <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+                <div class="p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-semibold text-gray-800">Task Management for <span id="childName"></span>
+                        </h3>
+                        <button onclick="closeTaskManagementModal()" class="text-gray-400 hover:text-gray-600">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </button>
+                    </div>
+                    <div id="taskManagementContent">
+                        <!-- Task status management will be populated here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        // Tab functionality (main top-level tabs)
+        document.querySelectorAll('.tab-button').forEach(button => {
+            button.addEventListener('click', () => {
+                const tabName = button.getAttribute('data-tab');
+
+                // Remove active class from all tabs and buttons
+                document.querySelectorAll('.tab-content').forEach(content => {
+                    content.classList.add('hidden');
+                    content.classList.remove('active');
+                });
+                document.querySelectorAll('.tab-button').forEach(btn => {
+                    btn.classList.remove('active', 'border-blue-500', 'text-blue-600');
+                    btn.classList.add('border-transparent', 'text-gray-500');
+                });
+
+                // Add active class to clicked tab and button
+                document.getElementById(tabName + '-tab').classList.remove('hidden');
+                document.getElementById(tabName + '-tab').classList.add('active');
+                button.classList.add('active', 'border-blue-500', 'text-blue-600');
+                button.classList.remove('border-transparent', 'text-gray-500');
+
+                // Load tab-specific data
+                loadTabData(tabName);
+            });
+        });
+
+        // User Management subtabs (Children / Parents / Schools / Hierarchy)
+        const userSubtabButtons = document.querySelectorAll('.user-subtab-button');
+        const userSubtabContents = document.querySelectorAll('.user-subtab-content');
+
+        function switchUserSubtab(target) {
+            // Hide all subtab contents
+            userSubtabContents.forEach(c => c.classList.add('hidden'));
+
+            // Remove active styles from all buttons
+            userSubtabButtons.forEach(btn => {
+                btn.classList.remove('border-blue-500', 'text-blue-700');
+                btn.classList.add('border-transparent', 'text-gray-500');
+            });
+
+            // Show target content
+            const content = document.getElementById(`users-subtab-${target}`);
+            if (content) content.classList.remove('hidden');
+
+            // Activate corresponding button
+            const activeBtn = Array.from(userSubtabButtons).find(
+                btn => btn.getAttribute('data-subtab') === target
+            );
+            if (activeBtn) {
+                activeBtn.classList.add('border-blue-500', 'text-blue-700');
+                activeBtn.classList.remove('border-transparent', 'text-gray-500');
+            }
+        }
+
+        userSubtabButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const target = button.getAttribute('data-subtab');
+                if (target) {
+                    switchUserSubtab(target);
+                }
+            });
+        });
+
+        // Load initial data
+        document.addEventListener('DOMContentLoaded', function () {
+            loadDashboardData();
+            loadComprehensiveAdminStats(); // Load comprehensive admin statistics
+            loadTabData('users');
+            // Ensure default subtab selection is Children
+            switchUserSubtab('children');
+            // Attach search/filter event listeners here
+            document.getElementById('searchBtn').addEventListener('click', filterAndDisplayUsers);
+            document.getElementById('userSearch').addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') filterAndDisplayUsers();
+            });
+        });
+
+        // Dashboard data loading
+        async function loadDashboardData() {
+            try {
+                const response = await fetch('/api/admin/dashboard-stats');
+                const data = await response.json();
+
+                if (data.success) {
+                    document.getElementById('totalParticipants').textContent = data.stats.totalParticipants;
+                    document.getElementById('activeStudies').textContent = data.stats.activeStudies;
+                    document.getElementById('completionRate').textContent = data.stats.completionRate + '%';
+                }
+            } catch (error) {
+                console.error('Error loading dashboard data:', error);
+            }
+        }
+
+        // Load comprehensive admin statistics
+        async function loadComprehensiveAdminStats() {
+            try {
+                const response = await fetch('/api/admin/comprehensive-stats');
+                const data = await response.json();
+
+                if (data.success) {
+                    displayAdminOverview(data.data);
+                    displaySchoolPerformanceChart(data.data.school_stats);
+                    displayTaskCompletionChart(data.data.task_completion_stats);
+                    displayClassDistributionChart(data.data.class_distribution);
+                    displayRecentActivityChart(data.data.recent_activity);
+                } else {
+                    console.error('Failed to load comprehensive admin stats:', data.message);
+                }
+            } catch (error) {
+                console.error('Error loading comprehensive admin stats:', error);
+            }
+        }
+
+
+        function displayAdminOverview(data) {
+            const overview = data.system_overview;
+
+            // Update overview cards
+            document.getElementById('totalSchools').textContent = overview.total_schools || 0;
+            document.getElementById('totalStudents').textContent = overview.total_students || 0;
+            document.getElementById('activeStudents').textContent = overview.active_students || 0;
+            document.getElementById('totalParents').textContent = overview.total_parents || 0;
+
+            // Calculate average completion rate
+            const taskStats = data.task_completion_stats || [];
+            // const avgCompletion = taskStats.length > 0 
+            //     ? (taskStats.reduce((sum, task) => sum + (task.completion_rate || 0), 0) / taskStats.length).toFixed(1)
+            //     : 0;
+            // document.getElementById('avgCompletion').textContent = avgCompletion + '%';
+
+            // Update data quality
+
+
+            // Calculate total tasks completed
+            const totalTasksCompleted = taskStats.reduce((sum, task) => sum + (task.completed_count || 0), 0);
+            document.getElementById('tasksCompleted').textContent = totalTasksCompleted;
+
+            // Calculate recent activity (last 7 days)
+            // const recentActivity = data.recent_activity.slice(0, 7);
+            // const totalRecentActivity = recentActivity.reduce((sum, activity) => sum + (activity.total_updates || 0), 0);
+            // document.getElementById('recentActivity').textContent = totalRecentActivity;
+        }
+
+        function displaySchoolPerformanceChart(schoolStats) {
+            const ctx = document.getElementById('schoolPerformanceChart').getContext('2d');
+
+            const labels = schoolStats.map(school => school.name);
+            const studentsData = schoolStats.map(school => school.students_count || 0);
+            const activeStudentsData = schoolStats.map(school => school.active_students_count || 0);
+
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Total Students',
+                        data: studentsData,
+                        backgroundColor: 'rgba(59, 130, 246, 0.8)',
+                        borderColor: 'rgba(59, 130, 246, 1)',
+                        borderWidth: 1
+                    }, {
+                        label: 'Active Students',
+                        data: activeStudentsData,
+                        backgroundColor: 'rgba(16, 185, 129, 0.8)',
+                        borderColor: 'rgba(16, 185, 129, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top'
+                        }
+                    }
+                }
+            });
+        }
+
+        function displayTaskCompletionChart(taskStats) {
+            const ctx = document.getElementById('taskCompletionChart').getContext('2d');
+
+            const labels = taskStats.map(task => task.task_name);
+            const completionRates = taskStats.map(task => task.completion_rate || 0);
+
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: completionRates,
+                        backgroundColor: [
+                            'rgba(59, 130, 246, 0.8)',
+                            'rgba(16, 185, 129, 0.8)',
+                            'rgba(245, 158, 11, 0.8)',
+                            'rgba(139, 92, 246, 0.8)',
+                            'rgba(239, 68, 68, 0.8)',
+                            'rgba(20, 184, 166, 0.8)'
+                        ],
+                        borderColor: [
+                            'rgba(59, 130, 246, 1)',
+                            'rgba(16, 185, 129, 1)',
+                            'rgba(245, 158, 11, 1)',
+                            'rgba(139, 92, 246, 1)',
+                            'rgba(239, 68, 68, 1)',
+                            'rgba(20, 184, 166, 1)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        }
+
+        function displayClassDistributionChart(classDistribution) {
+            const ctx = document.getElementById('classDistributionChart').getContext('2d');
+
+            const labels = classDistribution.map(cls => cls.class);
+            const studentsData = classDistribution.map(cls => cls.students_count || 0);
+
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Students',
+                        data: studentsData,
+                        backgroundColor: 'rgba(139, 92, 246, 0.8)',
+                        borderColor: 'rgba(139, 92, 246, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    }
+                }
+            });
+        }
+
+        function displayRecentActivityChart(recentActivity) {
+            const ctx = document.getElementById('recentActivityChart').getContext('2d');
+
+            // Sort by date and get last 30 days
+            const sortedActivity = recentActivity.sort((a, b) => new Date(a.date) - new Date(b.date));
+            const labels = sortedActivity.map(activity => {
+                const date = new Date(activity.date);
+                return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            });
+            const totalUpdates = sortedActivity.map(activity => activity.total_updates || 0);
+            const completions = sortedActivity.map(activity => activity.completions || 0);
+
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Total Updates',
+                        data: totalUpdates,
+                        borderColor: 'rgba(59, 130, 246, 1)',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }, {
+                        label: 'Completions',
+                        data: completions,
+                        borderColor: 'rgba(16, 185, 129, 1)',
+                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top'
+                        }
+                    }
+                }
+            });
+        }
+
+        // Tab-specific data loading
+        async function loadTabData(tabName) {
+            switch (tabName) {
+                case 'users':
+                    await loadUserData();
+                    break;
+                case 'data':
+                    await loadDataMonitoringData();
+                    break;
+                case 'export':
+                    // Export tab doesn't need initial data loading
+                    break;
+                case 'tasks':
+                    // Categories view does not need async data load
+                    break;
+                case 'suggestions':
+                    await loadSuggestions();
+                    break;
+                case 'feedback':
+                    await loadFeedbackData();
+                    break;
+                case 'inquiries':
+                    await loadInquiriesData();
+                    break;
+            }
+        }
+
+        let groupedUsers = { parents: [], children: [], schools: [] };
+        let allUsers = [];
+
+        async function loadUserData() {
+            // Show loading states
+            showLoadingStates();
+
+            try {
+                const response = await fetch('/api/admin/users-grouped', { credentials: 'same-origin', cache: 'no-store' });
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        window.location.href = '/admin/login';
+                        return;
+                    }
+                    throw new Error('Failed to load users');
+                }
+                const data = await response.json();
+                if (data && data.success) {
+                    //allUsers = data.users;
+                    allUsers = data.users || ([]).concat(data.parents || [], data.children || []);
+                    groupedUsers.parents = data.parents || [];
+                    groupedUsers.children = data.children || [];
+                    groupedUsers.schools = data.schools || [];
+                    groupedUsers.hierarchy = data.hierarchy || [];
+                    groupedUsers.unassigned = data.unassigned || { parents: [] };
+                    filterAndDisplayUsers();
+                    renderHierarchy(groupedUsers.hierarchy, groupedUsers.unassigned);
+                } else {
+                    hideLoadingStates();
+                    alert('Failed to load. Please try again.');
+                }
+            } catch (error) {
+                hideLoadingStates();
+                alert('Error loading user data:', error);
+            }
+        }
+
+        function showLoadingStates() {
+            // Show loading indicators
+            const childrenLoading = document.getElementById('childrenLoadingState');
+            const parentsLoading = document.getElementById('parentsLoadingState');
+            const schoolsLoading = document.getElementById('schoolsLoadingState');
+            const hierarchyLoading = document.getElementById('hierarchyLoadingState');
+
+            if (childrenLoading) childrenLoading.classList.remove('hidden');
+            if (parentsLoading) parentsLoading.classList.remove('hidden');
+            if (schoolsLoading) schoolsLoading.classList.remove('hidden');
+            if (hierarchyLoading) hierarchyLoading.classList.remove('hidden');
+
+            // Hide table bodies
+            const childrenTable = document.getElementById('childrenTableBody');
+            const parentsTable = document.getElementById('parentsTableBody');
+            const schoolsTable = document.getElementById('schoolsTableBody');
+            const hierarchyContainer = document.getElementById('hierarchyContainer');
+
+            if (childrenTable) childrenTable.style.display = 'none';
+            if (parentsTable) parentsTable.style.display = 'none';
+            if (schoolsTable) schoolsTable.style.display = 'none';
+            if (hierarchyContainer) hierarchyContainer.style.display = 'none';
+        }
+
+        function hideLoadingStates() {
+            // Hide loading indicators
+            const childrenLoading = document.getElementById('childrenLoadingState');
+            const parentsLoading = document.getElementById('parentsLoadingState');
+            const schoolsLoading = document.getElementById('schoolsLoadingState');
+            const hierarchyLoading = document.getElementById('hierarchyLoadingState');
+
+            if (childrenLoading) childrenLoading.classList.add('hidden');
+            if (parentsLoading) parentsLoading.classList.add('hidden');
+            if (schoolsLoading) schoolsLoading.classList.add('hidden');
+            if (hierarchyLoading) hierarchyLoading.classList.add('hidden');
+
+            // Show table bodies
+            const childrenTable = document.getElementById('childrenTableBody');
+            const parentsTable = document.getElementById('parentsTableBody');
+            const schoolsTable = document.getElementById('schoolsTableBody');
+            const hierarchyContainer = document.getElementById('hierarchyContainer');
+
+            if (childrenTable) childrenTable.style.display = '';
+            if (parentsTable) parentsTable.style.display = '';
+            if (schoolsTable) schoolsTable.style.display = '';
+            if (hierarchyContainer) hierarchyContainer.style.display = '';
+        }
+
+        function renderHierarchy(hierarchy, unassigned) {
+            const container = document.getElementById('hierarchyContainer');
+            const unassignedContainer = document.getElementById('unassignedContainer');
+            if (!container || !unassignedContainer) return;
+            container.innerHTML = '';
+            unassignedContainer.innerHTML = '';
+
+            // Hide loading state after rendering
+            hideLoadingStates();
+
+            // Hierarchy flow: School → Classes → Sections → Students (with parents)
+            (hierarchy || []).forEach(school => {
+                const schoolDiv = document.createElement('div');
+                schoolDiv.className = 'border border-gray-200 rounded-xl p-4 bg-white shadow-sm';
+
+                const classesHtml = (school.classes || []).map(cls => {
+                    const sectionsHtml = (cls.sections || []).map(sec => {
+                        const parents = sec.parents || [];
+                        const students = sec.students || [];
+
+                        const studentsHtml = students.map(st => {
+                            // Best-effort lookup for this student's parent in the same section
+                            let parentMatch = null;
+                            if (parents.length) {
+                                parentMatch = parents.find(p =>
+                                    (st.parent_id && p.id === st.parent_id) ||
+                                    (st.parent_email && p.email === st.parent_email)
+                                ) || (parents.length === 1 ? parents[0] : null);
+                            }
+
+                            const parentLabel = parentMatch
+                                ? `${parentMatch.name} (${parentMatch.email || 'no email'})`
+                                : (st.parent_email ? st.parent_email : 'Unknown parent');
+
+                            return `
+                                <li class="pl-4 border-l border-gray-200 text-sm py-1">
+                                    <div class="font-medium text-gray-800">${st.name || 'Unnamed student'}
+                                        ${st.email ? `<span class="text-gray-500 text-xs ml-1">(${st.email})</span>` : ''}
+                                    </div>
+                                    <div class="text-xs text-gray-500">
+                                        Parent: ${parentLabel}
+                                    </div>
+                                </li>
+                            `;
+                        }).join('');
+
+                        return `
+                            <div class="mt-2 ml-3">
+                                <div class="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                                    Section ${sec.name}
+                                </div>
+                                <ul class="mt-1 space-y-1">
+                                    ${studentsHtml || '<li class="text-xs text-gray-400 italic pl-1">No students in this section</li>'}
+                                </ul>
+                            </div>
+                        `;
+                    }).join('');
+
+                    return `
+                        <div class="mt-3">
+                            <div class="text-sm font-semibold text-gray-700">
+                                Class ${cls.name}${cls.academic_year ? ` <span class="text-gray-400 text-xs">(AY ${cls.academic_year})</span>` : ''}
+                            </div>
+                            ${sectionsHtml || '<div class="text-xs text-gray-400 italic ml-1 mt-1">No sections for this class</div>'}
+                        </div>
+                    `;
+                }).join('');
+
+                schoolDiv.innerHTML = `
+                    <div class="flex items-start justify-between">
+                        <div>
+                            <div class="text-sm font-bold text-gray-900">
+                                ${school.name || 'Unnamed school'}
+                            </div>
+                            ${school.email ? `<div class="text-xs text-gray-500">${school.email}</div>` : ''}
+                        </div>
+                    </div>
+                    <div class="mt-2">
+                        ${classesHtml || '<div class="text-xs text-gray-400 italic mt-1">No classes configured for this school</div>'}
+                    </div>
+                `;
+                container.appendChild(schoolDiv);
+            });
+
+            // Unassigned parents and their students (non-school)
+            (unassigned?.parents || []).forEach(p => {
+                const row = document.createElement('div');
+                row.className = 'border border-dashed border-gray-300 rounded-xl p-3 bg-white/80';
+                const kids = (p.children || []).map(st => `
+                    <li class="ml-4 list-disc text-sm">
+                        ${st.name || 'Unnamed student'}
+                        ${st.email ? `<span class="text-gray-500 text-xs ml-1">(${st.email})</span>` : ''}
+                    </li>
+                `).join('');
+                row.innerHTML = `
+                    <div class="font-medium text-gray-800">
+                        Parent: ${p.name}
+                        <span class="text-gray-500 text-xs">(${p.email})</span>
+                    </div>
+                    <ul class="mt-1">
+                        ${kids || '<li class="ml-4 list-disc text-sm text-gray-400 italic">No students</li>'}
+                    </ul>
+                `;
+                unassignedContainer.appendChild(row);
+            });
+        }
+
+        function filterAndDisplayUsers() {
+            const q = document.getElementById('userSearch').value.toLowerCase();
+            const parents = groupedUsers.parents.filter(u => (u.name || '').toLowerCase().includes(q) || (u.email || '').toLowerCase().includes(q));
+            const children = groupedUsers.children.filter(u => (u.name || '').toLowerCase().includes(q) || (u.email || '').toLowerCase().includes(q));
+            const schools = groupedUsers.schools.filter(s => (s.name || '').toLowerCase().includes(q) || (s.email || '').toLowerCase().includes(q));
+            displayParents(parents);
+            displayChildren(children);
+            displaySchools(schools);
+        }
+
+        function renderUserRow(user) {
+            return `
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${user.id}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${user.name}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${user.email}</td>
+                
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <button onclick="viewUserDetails(${user.id})" class="text-blue-600 hover:text-blue-900 mr-3">View Details</button>
+                    
+                </td>
+            `;
+        }
+
+        function renderParentRow(user) {
+            return `
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${user.id}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${user.name}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${user.email}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <button onclick="viewParentDetails(${user.id})" class="text-blue-600 hover:text-blue-900 mr-3">View Details</button>
+                  
+                </td>
+            `;
+        }
+
+
+        function renderChildRow(user) {
+            return `
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${user.id}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${user.name}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${user.email}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${user.age || 'N/A'}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${user.dyslexia_status || 'N/A'}</td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="flex items-center">
+                        <div class="flex-1 bg-gray-200 rounded-full h-2 mr-2">
+                            <div class="bg-blue-500 h-2 rounded-full" style="width: ${user.progress || 0}%"></div>
+                        </div>
+                        <span class="text-sm text-gray-600">${user.progress || 0}%</span>
+                    </div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <button onclick="manageChildTasks(${user.id})" class="text-blue-600 hover:text-blue-900">Manage Tasks</button>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <button onclick="viewUserDetails(${user.id})" class="text-blue-600 hover:text-blue-900 mr-3">View Details</button>
+                    
+                </td>
+            `;
+        }
+
+
+        function displayParents(parents) {
+            const tbody = document.getElementById('parentsTableBody');
+            tbody.innerHTML = '';
+            parents.forEach(user => {
+                const row = document.createElement('tr');
+                row.innerHTML = renderParentRow(user);
+                tbody.appendChild(row);
+            });
+        }
+
+        function displayChildren(children) {
+            const tbody = document.getElementById('childrenTableBody');
+            tbody.innerHTML = '';
+            children.forEach(user => {
+                const row = document.createElement('tr');
+                row.innerHTML = renderChildRow(user);
+                tbody.appendChild(row);
+            });
+        }
+
+        function displaySchools(schools) {
+            const tbody = document.getElementById('schoolsTableBody');
+            tbody.innerHTML = '';
+            schools.forEach(s => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${s.id}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${s.name}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${s.email}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${s.num_parents || 0}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${s.num_children || 0}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${s.assessments_completed || 0}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${s.phone || 'N/A'}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        async function viewUserDetails(userId) {
+            try {
+                const response = await fetch(`/api/admin/users/${userId}`);
+                const data = await response.json();
+
+                if (data.success) {
+                    const user = data.user;
+                    const modalContent = document.getElementById('userModalContent');
+                    modalContent.innerHTML = `
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <h4 class="font-semibold text-gray-700">Personal Information</h4>
+                                <p><strong>Name:</strong> ${user.name}</p>
+                                <p><strong>Email:</strong> ${user.email}</p>
+                                <p><strong>Age:</strong> ${user.age || 'N/A'}</p>
+                                <p><strong>Gender:</strong> ${user.gender || 'N/A'}</p>
+                            </div>
+                            <div>
+                                <h4 class="font-semibold text-gray-700">Study Information</h4>
+                                <p><strong>Dyslexia Status:</strong> ${user.dyslexia_status || 'N/A'}</p>
+                                <p><strong>Education Level:</strong> ${user.education_level || 'N/A'}</p>
+                                <p><strong>Native Language:</strong> ${user.native_language || 'N/A'}</p>
+                                <p><strong>Registration Date:</strong> ${user.created_at}</p>
+                            </div>
+                        </div>
+                        
+                    `;
+                    document.getElementById('userModal').classList.remove('hidden');
+                }
+            } catch (error) {
+                console.error('Error loading user details:', error);
+            }
+        }
+
+        async function viewParentDetails(parentId) {
+            try {
+                const response = await fetch(`/api/admin/parents/${parentId}`);
+                const data = await response.json();
+                if (!data.success) {
+                    alert(data.message || 'Failed to load parent details');
+                    return;
+                }
+
+                const parent = data.parent || {};
+                const children = data.children || [];
+
+                const childrenRows = children.map(child => `
+                    <tr class="border-b border-gray-100">
+                        <td class="px-3 py-2 text-xs text-gray-900 whitespace-nowrap">${child.name || 'Unnamed'}</td>
+                        <td class="px-3 py-2 text-xs text-gray-500 whitespace-nowrap">${child.email || 'NA'}</td>
+                        <td class="px-3 py-2 text-xs text-gray-900 whitespace-nowrap">${child.class_name || 'NA'}</td>
+                        <td class="px-3 py-2 text-xs text-gray-900 whitespace-nowrap">${child.section_name || 'NA'}</td>
+                        <td class="px-3 py-2 text-xs text-gray-900 whitespace-nowrap">${child.school_name || 'NA'}</td>
+                        <td class="px-3 py-2 text-xs text-gray-500 whitespace-nowrap">${child.age || 'NA'}</td>
+                        <td class="px-3 py-2 text-xs whitespace-nowrap">
+                            <span class="px-2 py-0.5 rounded-full ${child.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'} text-[11px] font-semibold">
+                                ${child.is_active ? 'Active' : 'Inactive'}
+                            </span>
+                        </td>
+                    </tr>
+                `).join('');
+
+                const modalContent = document.getElementById('userModalContent');
+                modalContent.innerHTML = `
+                    <div class="space-y-4 text-sm text-gray-700">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="border border-gray-200 rounded-lg p-4">
+                                <h4 class="font-semibold text-gray-800 mb-2">Parent Information</h4>
+                                <p><span class="font-medium">Name:</span> ${parent.name || 'NA'}</p>
+                                <p><span class="font-medium">Email:</span> ${parent.email || 'NA'}</p>
+                                <p><span class="font-medium">Associated School:</span> ${parent.school_name || 'Unassigned'}</p>
+                                <p><span class="font-medium">Joined:</span> ${parent.created_at ? new Date(parent.created_at).toLocaleString() : 'NA'}</p>
+                                <p><span class="font-medium">Total Children:</span> ${parent.total_children || children.length}</p>
+                            </div>
+                            <div class="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                                <h4 class="font-semibold text-gray-800 mb-2">Contact & Notes</h4>
+                                <p class="text-sm text-gray-600">Use the email specified to reach out to the parent. You can  their children from the table below.</p>
+                            </div>
+                        </div>
+                        <div class="border border-gray-200 rounded-lg">
+                            <div class="flex items-center justify-between px-4 py-2 border-b border-gray-200">
+                                <h4 class="font-semibold text-gray-800">Children (${children.length})</h4>
+                            </div>
+                            ${children.length ? `
+                                <div class="max-h-56 overflow-y-auto">
+                                    <table class="min-w-full text-xs">
+                                        <thead class="bg-gray-50 text-[11px] uppercase text-gray-500 tracking-wide">
+                                            <tr>
+                                                <th class="px-3 py-2 text-left">Name</th>
+                                                <th class="px-3 py-2 text-left">Email</th>
+                                                <th class="px-3 py-2 text-left">Class</th>
+                                                <th class="px-3 py-2 text-left">Section</th>
+                                                <th class="px-3 py-2 text-left">School</th>
+                                                <th class="px-3 py-2 text-left">Age</th>
+                                                <th class="px-3 py-2 text-left">Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="bg-white">
+                                            ${childrenRows}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            ` : `
+                                <div class="px-4 py-3 text-sm text-gray-500">
+                                    No children are currently linked to this parent.
+                                </div>
+                            `}
+                        </div>
+                    </div>
+                `;
+
+                document.getElementById('userModal').classList.remove('hidden');
+            } catch (error) {
+                console.error('Error loading parent details:', error);
+                alert('Failed to load parent details');
+            }
+        }
+
+        function closeUserModal() {
+            document.getElementById('userModal').classList.add('hidden');
+        }
+
+        // Data monitoring functions
+        async function loadDataMonitoringData() {
+            // Initialize charts
+            initializeTaskCompletionChart();
+            initializeDataQualityChart();
+            initializeTaskAnalyticsChart();
+
+            // Load recent activity
+            // await loadRecentActivity();
+        }
+
+        async function initializeTaskCompletionChart() {
+            const ctx = document.getElementById('taskCompletionChart').getContext('2d');
+            try {
+                const resp = await fetch('/api/admin/task-stats');
+                const data = await resp.json();
+                const labels = (data.success && data.labels) ? data.labels : ['Reading Aloud', 'Typing Task', 'Comprehension'];
+                const values = (data.success && data.data) ? data.data : [75, 68, 82];
+                new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels,
+                        datasets: [{
+                            data: values,
+                            backgroundColor: ['#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EF4444', '#14B8A6', '#F97316']
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: { position: 'bottom' }
+                        }
+                    }
+                });
+            } catch (e) {
+                new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Reading Aloud', 'Typing Task', 'Comprehension'],
+                        datasets: [{ data: [75, 68, 82], backgroundColor: ['#3B82F6', '#10B981', '#F59E0B'] }]
+                    }
+                });
+            }
+        }
+
+        function initializeDataQualityChart() {
+            const ctx = document.getElementById('dataQualityChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Audio Quality', 'Response Completeness', 'Data Consistency'],
+                    datasets: [{
+                        label: 'Quality Score (%)',
+                        data: [92, 88, 85],
+                        backgroundColor: ['#3B82F6', '#10B981', '#F59E0B']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100
+                        }
+                    }
+                }
+            });
+        }
+
+        function initializeTaskAnalyticsChart() {
+            const ctx = document.getElementById('taskAnalyticsChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+                    datasets: [{
+                        label: 'Task Completion Rate',
+                        data: [65, 72, 78, 85],
+                        borderColor: '#3B82F6',
+                        tension: 0.1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100
+                        }
+                    }
+                }
+            });
+        }
+
+        // async function loadRecentActivity() {
+        //     try {
+        //         const response = await fetch('/api/admin/recent-activity');
+        //         const data = await response.json();
+        //         if (data.success) {
+        //             const container = document.getElementById('recentActivity');
+        //             container.innerHTML = data.activities.map(activity => `
+        //                 <div class="flex items-center justify-between p-3 bg-gray-50 rounded">
+        //                     <div>
+        //                         <p class="text-sm font-medium text-gray-700">${activity.description}</p>
+        //                         <p class="text-xs text-gray-500">${activity.timestamp}</p>
+        //                     </div>
+        //                     <span class="px-2 py-1 text-xs rounded ${activity.type === 'completion' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'}">${activity.type}</span>
+        //                 </div>
+        //             `).join('');
+        //         }
+        //     } catch (error) {
+        //         console.error('Error loading recent activity:', error);
+        //     }
+        // }
+
+        // Export functions
+        async function exportDataset() {
+            const format = document.getElementById('exportFormat').value;
+            const anonymization = document.getElementById('anonymizationLevel').value;
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+
+            const includeData = {
+                demographics: document.getElementById('includeDemographics').checked,
+                audio: document.getElementById('includeAudio').checked,
+                typing: document.getElementById('includeTyping').checked,
+                comprehension: document.getElementById('includeComprehension').checked,
+                progress: document.getElementById('includeProgress').checked
+            };
+
+            try {
+                const response = await fetch('/api/admin/export-dataset', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        format,
+                        anonymization,
+                        startDate,
+                        endDate,
+                        includeData
+                    })
+                });
+
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `dyslexia_study_data_${new Date().toISOString().split('T')[0]}.${format}`;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                }
+            } catch (error) {
+                console.error('Error exporting dataset:', error);
+                alert('Error exporting dataset. Please try again.');
+            }
+        }
+
+        function previewExport() {
+            alert('Preview functionality will show a sample of the exported data.');
+        }
+
+        function scheduleExport() {
+            alert('Schedule export functionality will allow setting up recurring exports.');
+        }
+
+        // Task management functions
+        async function loadTaskData() {
+            try {
+                console.log('Loading task data...');
+
+                // Hide any previous errors
+                document.getElementById('taskError').classList.add('hidden');
+
+                const response = await fetch('/api/admin/tasks');
+                const data = await response.json();
+
+                console.log('Task data response:', data);
+
+                if (data.success) {
+                    console.log('Tasks found:', data.tasks);
+                    displayTasks(data.tasks);
+                    displayTaskParameters(data.tasks);
+                } else {
+                    console.error('Failed to load tasks:', data.message);
+                    showTaskError(data.message || 'Failed to load tasks');
+                }
+            } catch (error) {
+                console.error('Error loading task data:', error);
+                showTaskError('Network error: ' + error.message);
+            }
+        }
+
+        function showTaskError(message) {
+            const errorDiv = document.getElementById('taskError');
+            const errorMessage = document.getElementById('taskErrorMessage');
+            errorMessage.textContent = message;
+            errorDiv.classList.remove('hidden');
+        }
+
+        function displayTasks(tasks) {
+            const tbody = document.getElementById('tasksTableBody');
+            tbody.innerHTML = '';
+
+            // Clear any errors when tasks are displayed
+            document.getElementById('taskError').classList.add('hidden');
+
+            if (!tasks || tasks.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="px-6 py-4 text-center text-gray-500">
+                            No tasks found in the database
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tasks.forEach(task => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${task.task_name || 'N/A'}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${task.description ? 'Core Task' : 'N/A'}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="px-2 py-1 text-xs rounded bg-green-100 text-green-800">Active</span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${task.estimated_time || 'N/A'}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <button onclick="editTask(${task.id})" class="text-blue-600 hover:text-blue-900 mr-3">Edit</button>
+                        <button onclick="viewTaskDetails(${task.id})" class="text-green-600 hover:text-green-900 mr-3">View</button>
+                        <button onclick="deleteTask(${task.id})" class="text-red-600 hover:text-red-900">Delete</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+
+        function displayTaskParameters(tasks) {
+            const container = document.getElementById('taskParameters');
+            container.innerHTML = '';
+
+            if (!tasks || tasks.length === 0) {
+                container.innerHTML = '<p class="text-gray-500 text-center">No task parameters available</p>';
+                return;
+            }
+
+            container.innerHTML = tasks.map(task => `
+                <div class="border border-gray-200 rounded p-4">
+                    <h4 class="font-semibold text-gray-700 mb-2">${task.task_name || 'Unnamed Task'}</h4>
+                    <div class="space-y-2 text-sm">
+                        <p><strong>Description:</strong> ${task.description || 'No description available'}</p>
+                        <p><strong>Estimated Time:</strong> ${task.estimated_time || 'Not specified'}</p>
+                        <p><strong>Instructions:</strong> ${task.instructions || 'Standard instructions'}</p>
+                        <p><strong>Devices Required:</strong> ${task.devices_required || 'Computer with internet'}</p>
+                        <p><strong>Example:</strong> ${task.example || 'No example provided'}</p>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function addNewTask() {
+            document.getElementById('addTaskModal').classList.remove('hidden');
+            document.getElementById('addTaskForm').reset();
+        }
+
+        function deleteTask(taskId) {
+            if (!confirm('Are you sure you want to delete this task? This cannot be undone.')) return;
+            fetch(`/api/admin/tasks/${taskId}`, {
+                method: 'DELETE'
+            })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Task deleted!');
+                        loadTaskData();
+                    } else {
+                        alert('Error: ' + data.message);
+                    }
+                })
+                .catch(err => {
+                    alert('Error deleting task.');
+                    console.error(err);
+                });
+        }
+
+        function closeAddTaskModal() {
+            document.getElementById('addTaskModal').classList.add('hidden');
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            document.getElementById('addTaskForm').addEventListener('submit', async function (e) {
+                e.preventDefault();
+                const name = document.getElementById('newTaskName').value.trim();
+                const desc = document.getElementById('newTaskDesc').value.trim();
+                const instructions = document.getElementById('newTaskInstructions').value.trim();
+                const time = document.getElementById('newTaskTime').value.trim();
+                const devices = document.getElementById('newTaskDevices').value.trim();
+                const example = document.getElementById('newTaskExample').value.trim();
+                const mainContent = document.getElementById('newTaskMainContent').value.trim();
+
+                if (!name || !desc || !instructions || !time || !devices || !example || !mainContent) {
+                    alert('Please fill in all fields.');
+                    return;
+                }
+                const res = await fetch('/api/admin/tasks', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        task_name: name,
+                        description: desc,
+                        instructions: instructions,
+                        estimated_time: time,
+                        devices_required: devices,
+                        example: example,
+                        main_content: mainContent
+                    })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    alert('Task added!');
+                    closeAddTaskModal();
+                    loadTaskData();
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            });
+        });
+
+        function editTask(taskId) {
+            // Fetch current task details
+            fetch(`/api/admin/tasks`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        const task = data.tasks.find(t => t.id === taskId);
+                        if (!task) return alert('Task not found');
+                        const newName = prompt('Edit task name:', task.task_name);
+                        if (newName === null) return;
+                        const newDesc = prompt('Edit description:', task.description || '');
+                        if (newDesc === null) return;
+                        fetch(`/api/admin/tasks/${taskId}`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ task_name: newName, description: newDesc })
+                        })
+                            .then(res => res.json())
+                            .then(resp => {
+                                if (resp.success) {
+                                    alert('Task updated!');
+                                    // Optionally refresh task list
+                                    location.reload();
+                                } else {
+                                    alert('Error: ' + resp.message);
+                                }
+                            });
+                    }
+                });
+        }
+
+        function toggleTask(taskId) {
+            alert(`Toggle task ${taskId} status functionality.`);
+        }
+
+        function viewTaskDetails(taskId) {
+            // Fetch current task details
+            fetch(`/api/admin/tasks`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        const task = data.tasks.find(t => t.id === taskId);
+                        if (!task) return alert('Task not found');
+
+                        const details = `
+Task Name: ${task.task_name || 'N/A'}
+Description: ${task.description || 'N/A'}
+Instructions: ${task.instructions || 'N/A'}
+Estimated Time: ${task.estimated_time || 'N/A'}
+Devices Required: ${task.devices_required || 'N/A'}
+Example: ${task.example || 'N/A'}
+                        `;
+                        alert(details);
+                    }
+                })
+                .catch(err => {
+                    alert('Error loading task details');
+                    console.error(err);
+                });
+        }
+
+        // Utility functions
+        function refreshUserData() {
+            loadUserData();
+        }
+
+        async function exportUserData(userId) {
+            try {
+                const response = await fetch(`/api/admin/users/${userId}/export`);
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `user_${userId}_data.json`;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                }
+            } catch (error) {
+                console.error('Error exporting user data:', error);
+            }
+        }
+
+        function exportSchool(schoolId) {
+            alert('School export is not implemented yet.');
+        }
+
+        async function loadSuggestions() {
+            try {
+                const resp = await fetch('/api/admin/suggested-tasks', { credentials: 'same-origin' });
+                if (!resp.ok) {
+                    if (resp.status === 401) { window.location.href = '/admin/login'; return; }
+                    throw new Error('Failed');
+                }
+                const data = await resp.json();
+                const container = document.getElementById('suggestionsList');
+                const noSuggestionsMsg = document.getElementById('noSuggestionsMessage');
+                container.innerHTML = '';
+
+                // Show/hide empty state message
+                if (!data.suggestions || data.suggestions.length === 0) {
+                    container.classList.add('hidden');
+                    noSuggestionsMsg.classList.remove('hidden');
+                    return;
+                } else {
+                    container.classList.remove('hidden');
+                    noSuggestionsMsg.classList.add('hidden');
+                }
+
+                (data.suggestions || []).forEach(row => {
+                    const card = document.createElement('div');
+                    card.className = 'bg-white shadow-md rounded-lg border border-gray-200 p-5 flex flex-col';
+                    card.innerHTML = `
+                        <div class="flex items-start justify-between">
+                            <div>
+                                <div class="text-xs text-gray-500">When</div>
+                                <div class="text-sm text-gray-700">${new Date(row.created_at).toLocaleString()}</div>
+                                <div class="mt-2 text-xs text-gray-500">School</div>
+                                <div class="text-sm text-gray-700">${row.school_name} <span class="text-gray-400">(${row.school_email})</span></div>
+                            </div>
+                        </div>
+                        <div class="mt-4">
+                            <div class="text-xs text-gray-500">Title</div>
+                            <h3 class="text-lg font-semibold text-gray-900">${row.task_name}</h3>
+                        </div>
+                        <div class="mt-3">
+                            <div class="text-xs text-gray-500">Category</div>
+                            <div class="mt-1 inline-block text-xs px-2 py-0.5 rounded bg-blue-50 text-blue-700">${row.category}</div>
+                        </div>
+                        <div class="mt-3">
+                            <div class="text-xs text-gray-500">Description</div>
+                            <p class="text-sm text-gray-700">${row.description || ''}</p>
+                        </div>
+                        ${row.details ? `<div class=\"mt-3\"><div class=\"text-xs text-gray-500\">Details</div><div class=\"prose prose-sm max-w-none\">${row.details}</div></div>` : ''}
+                        <div class="mt-4 grid grid-cols-2 gap-3 text-sm">
+                            <div>
+                                <div class="text-xs text-gray-500">Estimated time</div>
+                                <div class="text-gray-800">${row.estimated_time ?? '—'} min</div>
+                            </div>
+                            <div>
+                                <div class="text-xs text-gray-500">Devices</div>
+                                <div class="text-gray-800">${row.devices_required || '—'}</div>
+                            </div>
+                        </div>
+                    `;
+                    container.appendChild(card);
+                });
+            } catch (e) {
+                console.error('Error loading suggestions', e);
+                alert('Failed to load suggestions');
+            }
+        }
+
+        // Task management functions for children
+        async function manageChildTasks(childId) {
+            try {
+                // Get child info for the modal title
+                const child = groupedUsers.children.find(c => c.id == childId);
+                if (child) {
+                    document.getElementById('childName').textContent = child.name;
+                }
+
+                // Load tasks for this child
+                const response = await fetch(`/api/admin/get-child-tasks?user_id=${childId}`);
+                const data = await response.json();
+
+                if (data.success) {
+                    displayTaskManagement(data.tasks, childId);
+                    document.getElementById('taskManagementModal').classList.remove('hidden');
+                } else {
+                    alert('Failed to load tasks: ' + data.message);
+                }
+            } catch (error) {
+                console.error('Error loading child tasks:', error);
+                alert('Error loading tasks. Please try again.');
+            }
+        }
+
+        function displayTaskManagement(tasks, childId) {
+            const container = document.getElementById('taskManagementContent');
+            container.innerHTML = `
+                <div class="space-y-4">
+                    <p class="text-gray-600">Change the status of each task for this child participant:</p>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        ${tasks.map(task => `
+                            <div class="border border-gray-200 rounded-lg p-4">
+                                <h4 class="font-semibold text-gray-800 mb-2">${task.task_name}</h4>
+                                <div class="flex items-center space-x-3">
+                                    <label class="text-sm text-gray-600">Status:</label>
+                                    <select 
+                                        onchange="updateTaskStatus(${childId}, '${task.task_name}', this.value,this)"
+                                        class="border border-gray-300 rounded px-3 py-1 text-sm focus:ring-2 focus:ring-blue-500"
+                                    >
+                                        <option value="Not Started" ${task.status === 'Not Started' ? 'selected' : ''}>Not Started</option>
+                                        <option value="In Progress" ${task.status === 'In Progress' ? 'selected' : ''}>In Progress</option>
+                                        <option value="Completed" ${task.status === 'Completed' ? 'selected' : ''}>Completed</option>
+                                    </select>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <div class="mt-6 pt-4 border-t border-gray-200">
+                        <button onclick="closeTaskManagementModal()" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600">
+                            Close
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function updateTaskStatus(childId, taskName, newStatus, statusElement) {
+            try {
+                const response = await fetch('/api/admin/set-user-task-status', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        user_id: childId,
+                        task_name: taskName,
+                        status: newStatus
+                    })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    // Update the local data
+                    const child = groupedUsers.children.find(c => c.id == childId);
+                    if (child) {
+                        // Recalculate progress
+                        const allTasks = ['Reading Aloud Task 1', 'Typing Task', 'Reading Comprehension', 'Mathematical Comprehension', 'Writing Task', 'Aptitude Test']
+                        const completedTasks = allTasks.filter(task => {
+                            if (task === taskName) {
+                                return newStatus === 'Completed';
+                            }
+                            // Find existing status for other tasks
+                            const existingTask = child.tasks ? child.tasks.find(t => t.task_name === task) : null;
+                            return existingTask && existingTask.status === 'Completed';
+                        });
+                        child.progress = Math.round((completedTasks.length / allTasks.length) * 100);
+                    }
+
+                    // Show success message
+                    //const statusElement = event.target;
+                    const originalColor = statusElement.style.backgroundColor;
+                    statusElement.style.backgroundColor = '#10B981';
+                    statusElement.style.color = 'white';
+                    setTimeout(() => {
+                        statusElement.style.backgroundColor = originalColor;
+                        statusElement.style.color = '';
+                    }, 1000);
+                } else {
+                    alert('Failed to update task status: ' + data.message);
+                }
+            } catch (error) {
+                console.error('Error updating task status:', error);
+                alert('Error updating task status. Please try again.');
+            }
+        }
+
+        function closeTaskManagementModal() {
+            document.getElementById('taskManagementModal').classList.add('hidden');
+            // Refresh the children table to show updated progress
+            displayChildren(groupedUsers.children);
+        }
+
+        function setUserTaskStatus(userId, taskName, status) {
+            fetch('/api/admin/set-user-task-status', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user_id: userId, task_name: taskName, status: status })
+            })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Task status updated!');
+                    } else {
+                        alert('Error: ' + data.message);
+                    }
+                })
+                .catch(() => alert('Network error.'));
+        }
+
+        // Logout functionality
+        document.getElementById('logoutBtn').addEventListener('click', async function () {
+            try {
+                const response = await fetch('/api/admin/logout', {
+                    method: 'POST'
+                });
+                if (response.ok) {
+                    window.location.href = '/admin/login';
+                }
+            } catch (error) {
+                console.error('Error logging out:', error);
+            }
+        });
+
+        // Feedback functions
+        async function loadFeedbackData() {
+            const tbody = document.getElementById('feedbackTableBody');
+            const loading = document.getElementById('feedbackLoading');
+            const noData = document.getElementById('noFeedbackMessage');
+
+            tbody.innerHTML = '';
+            loading.classList.remove('hidden');
+            noData.classList.add('hidden');
+
+            try {
+                const response = await fetch('/api/admin/feedback');
+                const data = await response.json();
+
+                loading.classList.add('hidden');
+
+                if (data.success && data.feedback.length > 0) {
+                    displayFeedback(data.feedback);
+                } else {
+                    noData.classList.remove('hidden');
+                }
+            } catch (error) {
+                console.error('Error loading feedback:', error);
+                loading.textContent = 'Error loading feedback';
+            }
+        }
+
+        function displayFeedback(feedbackItems) {
+            const tbody = document.getElementById('feedbackTableBody');
+
+            feedbackItems.forEach(item => {
+                const row = document.createElement('tr');
+                const date = new Date(item.created_at).toLocaleString();
+                const stars = '★'.repeat(item.rating) + '☆'.repeat(5 - item.rating);
+
+                row.innerHTML = `
+                    <td class="px-4 py-3 whitespace-nowrap text-gray-600">${date}</td>
+                    <td class="px-4 py-3">
+                        <div class="font-medium text-gray-900">${item.user_name || 'Anonymous'}</div>
+                        <div class="text-xs text-gray-500">${item.user_email || ''}</div>
+                    </td>
+                    <td class="px-4 py-3 text-gray-800">${item.task_name}</td>
+                    <td class="px-4 py-3 text-yellow-500 tracking-widest">${stars}</td>
+                    <td class="px-4 py-3 text-gray-600 italic">"${item.comments || 'No comments'}"</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // Inquiries functions
+        async function loadInquiriesData() {
+            const tbody = document.getElementById('inquiriesTableBody');
+            const loading = document.getElementById('inquiriesLoading');
+            const noData = document.getElementById('noInquiriesMessage');
+
+            tbody.innerHTML = '';
+            loading.classList.remove('hidden');
+            noData.classList.add('hidden');
+
+            try {
+                const response = await fetch('/api/admin/inquiries');
+                const data = await response.json();
+
+                loading.classList.add('hidden');
+
+                if (data.success && data.inquiries.length > 0) {
+                    displayInquiries(data.inquiries);
+                } else {
+                    noData.classList.remove('hidden');
+                }
+            } catch (error) {
+                console.error('Error loading inquiries:', error);
+                loading.textContent = 'Error loading inquiries';
+            }
+        }
+
+        function displayInquiries(inquiries) {
+            const tbody = document.getElementById('inquiriesTableBody');
+
+            inquiries.forEach(item => {
+                const row = document.createElement('tr');
+                const date = new Date(item.created_at).toLocaleString();
+
+                row.innerHTML = `
+                    <td class="px-4 py-3 whitespace-nowrap text-gray-600">${date}</td>
+                    <td class="px-4 py-3 font-medium text-gray-900">${item.name}</td>
+                    <td class="px-4 py-3 text-blue-600 hover:underline"><a href="mailto:${item.email}">${item.email}</a></td>
+                    <td class="px-4 py-3 text-gray-800">${item.subject || '-'}</td>
+                    <td class="px-4 py-3 text-gray-600 max-w-xs truncate" title="${item.message}">${item.message}</td>
+                    <td class="px-4 py-3">
+                        <span class="px-2 py-1 text-xs rounded bg-blue-100 text-blue-800">${item.status}</span>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+    </script>
+</body>
+
+</html>
+```

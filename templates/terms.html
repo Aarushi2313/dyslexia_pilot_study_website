@@ -1,0 +1,197 @@
+{% extends "base_dashboard.html" %}
+
+{% block navbar %}
+<!-- Dashboard navbar hidden for this public page -->
+{% endblock %}
+
+
+{% block title %}Terms and Conditions - Dyslexia Research Study{% endblock %}
+
+{% block sidebar %}
+<!-- Sidebar hidden -->
+{% endblock %}
+
+{% block extra_head %}
+<style>
+    /* Reset main content wrapper */
+    .main-content-wrapper {
+        margin-left: 0 !important;
+        width: 100% !important;
+    }
+
+    /* Move accessibility button to bottom left */
+    div.fixed.bottom-3.right-3.z-50 {
+        right: auto !important;
+        left: 1rem !important;
+        bottom: 1rem !important;
+    }
+
+    /* Move accessibility panel to left side */
+    #accessibilityPanel {
+        right: auto !important;
+        left: 0 !important;
+        border-left: none !important;
+        border-right: 1px solid #d1d5db;
+        /* gray-300 */
+    }
+
+    body {
+        background-color: #f5f5dc !important;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Landing Page Header -->
+<header class="primary-bg text-white py-4 md:py-6">
+    <div class="content-wrapper flex justify-between items-center px-4 md:px-6">
+        <div class="flex items-center flex-1 min-w-0">
+            <h1 class="text-sm sm:text-base md:text-xl lg:text-2xl font-bold truncate">Leveraging NLP for Dyslexia
+                Identification</h1>
+        </div>
+
+        <!-- Mobile menu button -->
+        <button id="mobileMenuBtn"
+            class="lg:hidden ml-2 p-2 rounded-md bg-white/10 hover:bg-white/20 focus:outline-none flex-shrink-0"
+            aria-label="Toggle menu">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+        </button>
+
+        <!-- Desktop navigation -->
+        <nav class="hidden lg:block flex-shrink-0">
+            <ul class="flex space-x-4 xl:space-x-6 text-base xl:text-lg">
+                <li><a href="{{ url_for('landing') }}#about" class="hover:text-yellow-100 transition">About</a></li>
+                <li><a href="{{ url_for('landing') }}#eligibility"
+                        class="hover:text-yellow-100 transition">Eligibility</a></li>
+                <li><a href="{{ url_for('landing') }}#contact" class="hover:text-yellow-100 transition">Contact</a></li>
+                {% if session.get('user_type') %}
+                <li>
+                    <a href="{% if session.get('user_type') == 'parent' %}/parent{% elif session.get('user_type') == 'school' %}/school.html{% else %}/participant-dashboard{% endif %}"
+                        class="hover:text-yellow-100 transition">Dashboard</a>
+                </li>
+                {% else %}
+                <li><a href="{{ url_for('signin') }}" class="hover:text-yellow-100 transition">Sign In</a></li>
+                {% endif %}
+                <li>
+                    <a href="/admin/login"
+                        class="hover:text-yellow-100 transition bg-yellow-500 text-blue-900 px-3 py-1 rounded">Admin</a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+
+    <!-- Mobile menu dropdown -->
+    <div id="mobileMenu" class="hidden lg:hidden border-t border-white/20 mt-4">
+        <nav class="content-wrapper px-4 py-4">
+            <ul class="space-y-3 text-base">
+                <li><a href="{{ url_for('landing') }}#about"
+                        class="block hover:text-yellow-100 transition py-2">About</a></li>
+                <li><a href="{{ url_for('landing') }}#eligibility"
+                        class="block hover:text-yellow-100 transition py-2">Eligibility</a></li>
+                <li><a href="{{ url_for('landing') }}#contact"
+                        class="block hover:text-yellow-100 transition py-2">Contact</a></li>
+                {% if session.get('user_type') %}
+                <li>
+                    <a href="{% if session.get('user_type') == 'parent' %}/parent{% elif session.get('user_type') == 'school' %}/school.html{% else %}/participant-dashboard{% endif %}"
+                        class="block hover:text-yellow-100 transition py-2">Dashboard</a>
+                </li>
+                {% else %}
+                <li><a href="{{ url_for('signin') }}" class="block hover:text-yellow-100 transition py-2">Sign In</a>
+                </li>
+                {% endif %}
+                <li>
+                    <a href="/admin/login"
+                        class="inline-block bg-yellow-500 text-blue-900 px-4 py-2 rounded hover:bg-yellow-400 transition">Admin
+                        Portal</a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+</header>
+<script>
+    // Header mobile menu script
+    document.addEventListener('DOMContentLoaded', function () {
+        const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+        const mobileMenu = document.getElementById('mobileMenu');
+        if (mobileMenuBtn && mobileMenu) {
+            mobileMenuBtn.addEventListener('click', () => {
+                mobileMenu.classList.toggle('hidden');
+            });
+        }
+    });
+</script>
+
+<div class="content-wrapper py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-4xl mx-auto bg-white rounded-lg shadow-lg p-6 md:p-8">
+        <h1 class="text-3xl font-bold text-gray-900 mb-6">Terms and Conditions</h1>
+        <p class="text-gray-600 mb-8">Last updated: January 14, 2026</p>
+
+        <div class="prose prose-blue max-w-none text-gray-700">
+            <h2 class="text-xl font-semibold text-gray-800 mt-6 mb-3">1. Introduction</h2>
+            <p class="mb-4">
+                Welcome to the Dyslexia Research Study platform. By accessing or using our
+                website and services, you agree to be bound by these Terms and Conditions. This platform is designed to
+                support the identification and study of dyslexia through interactive tasks and assessments.
+            </p>
+
+            <h2 class="text-xl font-semibold text-gray-800 mt-6 mb-3">2. Participation</h2>
+            <p class="mb-4">
+                Participation in this study is voluntary. By creating an account, you confirm that you have provided
+                accurate information and have the necessary consent (if under 18, parental consent) to participate in
+                the research activities provided on this platform.
+            </p>
+
+            <h2 class="text-xl font-semibold text-gray-800 mt-6 mb-3">3. User Accounts</h2>
+            <p class="mb-4">
+                You are responsible for maintaining the confidentiality of your account credentials and for all
+                activities
+                that occur under your account. You agree to notify us immediately of any unauthorized use of your
+                account.
+            </p>
+
+            <h2 class="text-xl font-semibold text-gray-800 mt-6 mb-3">4. Intellectual Property</h2>
+            <p class="mb-4">
+                The content, features, and functionality of this platform, including but not limited to text, graphics,
+                logos, and software, are the exclusive property of the Dyslexia Research Study team, Flames Lab, IIITD
+                and are protected by
+                intellectual property laws.
+            </p>
+
+            <h2 class="text-xl font-semibold text-gray-800 mt-6 mb-3">5. Data Usage</h2>
+            <p class="mb-4">
+                Your data will be used solely for research purposes as described in our <a
+                    href="{{ url_for('privacy_policy') }}" class="text-blue-600 hover:underline">Privacy Policy</a>. We
+                are committed to protecting your privacy and ensuring the anonymity of your data in any published
+                findings.
+            </p>
+
+            <h2 class="text-xl font-semibold text-gray-800 mt-6 mb-3">6. Limitation of Liability</h2>
+            <p class="mb-4">
+                In no event shall the Dyslexia Research Study team be liable for any indirect, incidental, special,
+                consequential, or punitive damages arising out of or related to your use of this platform.
+            </p>
+
+            <h2 class="text-xl font-semibold text-gray-800 mt-6 mb-3">7. Changes to Terms</h2>
+            <p class="mb-4">
+                We reserve the right to modify these terms at any time. We will notify users of any significant changes.
+                Your continued use of the platform after such changes constitutes your acceptance of the new Terms and
+                Conditions.
+            </p>
+
+            <h2 class="text-xl font-semibold text-gray-800 mt-6 mb-3">8. Contact Us</h2>
+            <p class="mb-4">
+                If you have any questions about these Terms, please contact us at <a
+                    href="mailto:support@dyslexiastudy.com"
+                    class="text-blue-600 hover:underline">support@dyslexiastudy.com</a>.
+            </p>
+        </div>
+
+        <div class="mt-8 pt-6 border-t border-gray-200">
+            <a href="{{ url_for('landing') }}" class="text-blue-600 hover:text-blue-800 font-medium">&larr; Back to
+                Home</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

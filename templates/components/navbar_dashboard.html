@@ -1,0 +1,27 @@
+<header class="primary-bg text-white py-4 md:py-6">
+    <div class="content-wrapper flex justify-between items-center px-3 sm:px-4">
+
+        <div class="flex items-center flex-1 min-w-0">
+            {% if request.endpoint == 'participant_dashboard' %}
+            <img src="{{ url_for('static', filename='gauge.png') }}" alt="Dashboard Graphic"
+                class="h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 rounded-full mr-2 sm:mr-3 md:mr-4">
+            <h1 class="text-sm sm:text-base md:text-xl lg:text-2xl font-bold truncate">Dyslexia Study Dashboard</h1>
+            {% endif %}
+        </div>
+
+        <!-- Desktop Navigation -->
+        <nav>
+            <ul class="flex space-x-3 lg:space-x-6 text-base xl:text-lg items-center">
+                <li><a href="{{ url_for('landing') }}" class="hover:text-yellow-100 transition">Homepage</a></li>
+                <li><a href="/profile" class="hover:text-yellow-100 transition">Profile</a></li>
+                <li><a href="/stats" class="hover:text-yellow-100 transition">Stats</a></li>
+                <li id="backToParentNavDesktop" class="hidden">
+                    <a href="#" onclick="switchBackToParent()" class="hover:text-yellow-100 transition">Back to
+                        Parent</a>
+                </li>
+                <li><a href="#" onclick="handleLogout()"
+                        class="hover:text-yellow-100 transition text-red-200">Logout</a></li>
+            </ul>
+        </nav>
+    </div>
+</header>

@@ -1,0 +1,308 @@
+{% extends "base_dashboard.html" %}
+
+{% block title %}Participant Dashboard - Dyslexia Research Study{% endblock %}
+
+{% block sidebar %}
+<!-- Sidebar hidden on dashboard -->
+{% endblock %}
+
+{% block extra_head %}
+<style>
+    /* Reset main content wrapper since sidebar is gone */
+    .main-content-wrapper {
+        margin-left: 0 !important;
+        width: 100% !important;
+    }
+
+    /* Prevent flickering during task loading */
+    #taskGrid {
+        min-height: 400px;
+    }
+
+    .task-card {
+        transition: opacity 0.3s ease;
+    }
+
+    .loading-spinner {
+        animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+        from {
+            transform: rotate(0deg);
+        }
+
+        to {
+            transform: rotate(360deg);
+        }
+    }
+
+    /* Smooth transitions for status changes */
+    .status-badge {
+        transition: all 0.3s ease;
+    }
+
+    .task-btn {
+        transition: all 0.3s ease;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Header removed (now in base template) -->
+
+<!-- Welcome and Progress -->
+<div class="content-wrapper mt-4 sm:mt-6 md:mt-8 mb-8 sm:mb-12 md:mb-16 px-3 sm:px-4">
+    <div
+        class="bg-white rounded-lg sm:rounded-xl shadow-md p-4 sm:p-5 md:p-6 flex flex-col md:flex-row items-center justify-between mb-4 sm:mb-6 md:mb-8">
+        <div class="text-center md:text-left mb-4 md:mb-0">
+            <h2 class="text-lg sm:text-xl md:text-2xl font-bold mb-1 sm:mb-2">Welcome, {{ user_name if user_name else
+                'Participant' }}!</h2>
+            <p class="text-sm sm:text-base text-gray-700">Here are your activities. Complete them at your own pace!</p>
+        </div>
+        <div class="w-full md:w-1/3 mt-4 md:mt-0">
+            <div class="mb-2 text-xs sm:text-sm text-gray-600">Overall Progress</div>
+            <div class="w-full bg-gray-200 rounded-full h-3 sm:h-4">
+                <div id="progressBar" class="bg-blue-800 h-3 sm:h-4 rounded-full transition-all duration-500"
+                    style="width: {{ progress }}%"></div>
+            </div>
+            <div class="text-right text-xs text-gray-500 mt-1" id="progressText">
+                {{ tasks | selectattr('status', 'equalto', 'Completed') | list | length }} of {{ total_tasks }} tasks
+                completed
+            </div>
+        </div>
+    </div>
+
+    <!-- Task Cards -->
+    <div id="taskGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 md:gap-8 mt-4">
+        <!-- Tasks will be populated by JS or Server Side if fallback -->
+    </div>
+
+    <!-- Retake Confirmation Modal -->
+    <div id="retakeModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 animate-fade-in-up transform transition-all">
+            <div class="text-center">
+                <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-blue-100 mb-4">
+                    <svg class="h-6 w-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15">
+                        </path>
+                    </svg>
+                </div>
+                <h3 class="text-lg leading-6 font-medium text-gray-900 mb-2">Retake Task?</h3>
+                <p class="text-sm text-gray-500 mb-6">
+                    You have already completed <span id="retakeTaskName" class="font-bold text-gray-700">this
+                        task</span>.
+                    Do you want to retake it? This will create a new attempt.
+                </p>
+                <div class="flex justify-center gap-3">
+                    <button id="cancelRetakeBtn"
+                        class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition focus:outline-none">
+                        Cancel
+                    </button>
+                    <button id="confirmRetakeBtn"
+                        class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition focus:outline-none font-medium">
+                        Yes, Retake It
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Task status update logic
+    let totalTasks = {{ total_tasks }};
+
+    function updateProgressBar(tasks) {
+        const completed = tasks.filter(t => t.status === 'Completed').length;
+        totalTasks = tasks.length || 1;
+        const progress = Math.round((completed / totalTasks) * 100);
+        document.getElementById('progressBar').style.width = progress + '%';
+        document.getElementById('progressText').textContent = `${completed} of ${totalTasks} tasks completed`;
+    }
+
+    // Render tasks strictly from backend-allowed list
+    function iconFor(taskName) {
+        if (taskName === 'Reading Aloud Task 1') return "{{ url_for('static', filename='read.png') }}";
+        if (taskName === 'Typing Task') return "{{ url_for('static', filename='type.png') }}";
+        if (taskName === 'Reading Comprehension') return "{{ url_for('static', filename='comprehend2.jpg') }}";
+        if (taskName === 'Mathematical Comprehension') return "{{ url_for('static', filename='math.jpg') }}";
+        if (taskName === 'Writing Task') return "{{ url_for('static', filename='write.jpg') }}";
+        if (taskName === 'Aptitude Test') return "{{ url_for('static', filename='aptitude.png') }}";
+        return "{{ url_for('static', filename='gauge.png') }}";
+    }
+
+    function renderAllowedTasks(tasks) {
+        const grid = document.getElementById('taskGrid');
+        if (!grid) return;
+        grid.innerHTML = '';
+        (tasks || []).forEach(task => {
+            const card = document.createElement('div');
+
+            // Common base classes with p-0 for edge-to-edge image
+            let cardClasses = 'card task-card bg-white rounded-lg sm:rounded-xl shadow-md flex flex-col items-center text-center cursor-pointer hover:shadow-xl transform hover:scale-105 transition-all duration-200 group relative overflow-hidden p-0';
+
+            card.className = cardClasses;
+            card.setAttribute('data-task', task.task_name);
+            card.setAttribute('data-status', task.status);
+
+            // Get task description
+            const description = getTaskDescription(task.task_name);
+
+            // Create status badge
+            const statusBadge = task.status === 'Not Started'
+                ? '<span class="status-badge inline-block px-2 sm:px-3 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800 mb-2 sm:mb-3 group-hover:bg-yellow-200 transition-colors">Not Started</span>'
+                : task.status === 'In Progress'
+                    ? '<span class="status-badge inline-block px-2 sm:px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800 mb-2 sm:mb-3 group-hover:bg-blue-200 transition-colors">In Progress</span>'
+                    : '<span class="status-badge inline-block px-2 sm:px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800 mb-2 sm:mb-3 group-hover:bg-green-200 transition-colors">Completed</span>';
+
+            // Universal Rectangular top image layout
+            card.innerHTML = `
+                <div class="w-full h-32 sm:h-40 overflow-hidden">
+                    <img src="${iconFor(task.task_name)}" alt="${task.task_name}" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300">
+                </div>
+                <div class="p-4 sm:p-5 w-full flex flex-col items-center">
+                    <h3 class="text-base sm:text-lg font-bold mb-1 sm:mb-2 text-gray-800 group-hover:text-blue-700 transition-colors">${task.task_name}</h3>
+                    <p class="mb-3 sm:mb-4 text-xs sm:text-sm text-gray-600">${description}</p>
+                    ${statusBadge}
+                </div>
+                <!-- Hover overlay hint -->
+                <div class="absolute inset-0 bg-blue-50 opacity-0 group-hover:opacity-10 transition-opacity duration-300 pointer-events-none"></div>
+            `;
+
+            grid.appendChild(card);
+        });
+        updateProgressBar(tasks || []);
+    }
+
+    function getTaskDescription(taskName) {
+        if (taskName === 'Reading Aloud Task 1') return 'Read a short story out loud.';
+        if (taskName === 'Typing Task') return 'Type a short essay on the topic.';
+        if (taskName === 'Reading Comprehension') return 'Read a passage and answer questions.';
+        if (taskName === 'Mathematical Comprehension') return 'Solve math-based questions.';
+        if (taskName === 'Writing Task') return 'Write a creative story or essay.';
+        if (taskName === 'Aptitude Test') return 'Test your logical & verbal reasoning.';
+        return 'Complete this task to progress.';
+    }
+
+    // Load allowed tasks on page load
+    document.addEventListener('DOMContentLoaded', function () {
+        // Show loading state initially
+        const taskGrid = document.getElementById('taskGrid');
+        if (taskGrid && !taskGrid.hasChildNodes()) {
+            taskGrid.innerHTML = '<div class="col-span-full text-center py-8"><div class="inline-block loading-spinner rounded-full h-8 w-8 border-b-2 border-blue-600"></div><p class="mt-2 text-gray-600">Loading tasks...</p></div>';
+        }
+
+        fetch('/api/allowed-tasks')
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    renderAllowedTasks(data.tasks);
+                    // checkSavedProgress(); // No longer needed as we removed the buttons
+                }
+            })
+            .catch(() => {
+                if (taskGrid) {
+                    taskGrid.innerHTML = '<div class="col-span-full text-center py-8"><p class="text-red-600">Failed to load tasks. Please refresh the page.</p></div>';
+                }
+            });
+    });
+
+    // Task Card Click Handler
+    let taskToRetake = null;
+    const retakeModal = document.getElementById('retakeModal');
+    const retakeTaskNameSpan = document.getElementById('retakeTaskName');
+    const confirmRetakeBtn = document.getElementById('confirmRetakeBtn');
+    const cancelRetakeBtn = document.getElementById('cancelRetakeBtn');
+
+    // Close modal on outside click
+    retakeModal.addEventListener('click', (e) => {
+        if (e.target === retakeModal) hideRetakeModal();
+    });
+
+    cancelRetakeBtn.addEventListener('click', hideRetakeModal);
+
+    function showRetakeModal(taskName) {
+        taskToRetake = taskName;
+        retakeTaskNameSpan.textContent = taskName;
+        retakeModal.classList.remove('hidden');
+    }
+
+    function hideRetakeModal() {
+        retakeModal.classList.add('hidden');
+        taskToRetake = null;
+    }
+
+    confirmRetakeBtn.addEventListener('click', () => {
+        if (!taskToRetake) return;
+
+        const taskName = taskToRetake;
+
+        // Disable button to prevent double clicks
+        confirmRetakeBtn.disabled = true;
+        confirmRetakeBtn.textContent = 'Processing...';
+
+        fetch('/api/retake-task', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ task_name: taskName })
+        })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    const page = getTaskPage(taskName);
+                    if (page) window.location.href = '/' + page + '?retake=true';
+                } else {
+                    alert(data.message || 'Failed to reset task for retake');
+                    hideRetakeModal();
+                }
+            })
+            .catch(error => {
+                console.error('Error resetting task:', error);
+                alert('Error resetting task. Please try again.');
+                hideRetakeModal();
+            })
+            .finally(() => {
+                confirmRetakeBtn.disabled = false;
+                confirmRetakeBtn.textContent = 'Yes, Retake It';
+            });
+    });
+
+    document.addEventListener('click', function (e) {
+        const card = e.target.closest('.task-card');
+        if (card) {
+            const taskName = card.getAttribute('data-task');
+            const status = card.getAttribute('data-status');
+
+            if (status === 'Completed') {
+                // Show custom modal instead of native confirm
+                showRetakeModal(taskName);
+            } else {
+                // Not started or In Progress
+                const page = getTaskPage(taskName);
+                if (page) window.location.href = '/' + page;
+            }
+        }
+    });
+
+    function getTaskPage(taskName) {
+        if (taskName === 'Reading Aloud Task 1') return 'task1.html';
+        if (taskName === 'Typing Task') return 'task2.html';
+        if (taskName === 'Reading Comprehension') return 'task3.html';
+        if (taskName === 'Mathematical Comprehension') return 'task4.html';
+        if (taskName === 'Writing Task') return 'task5.html';
+        // Note: Aptitude test was previously pointing to task6.html, ensuring it points to aptitude.html if that is the new standard
+        // Based on previous edits, aptitude.html was refactored.
+        if (taskName === 'Aptitude Test') return 'task6.html';
+
+        else {
+            const safeName = taskName.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+            return `task_${safeName}.html`;
+        }
+    }
+
+</script>
+{% endblock %}

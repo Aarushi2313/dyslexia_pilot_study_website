@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Parent Profile - Dyslexia Research Study</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='landing_style.css') }}">
+</head>
+
+<body>
+    <!-- Header -->
+    <header class="primary-bg text-white py-6">
+        <div class="content-wrapper flex justify-between items-center">
+            <div class="flex items-center">
+                <img src="{{ url_for('static', filename='profile.jpg') }}" alt="Dashboard Graphic"
+                    class="h-12 w-12 rounded-full mr-4 hidden md:block">
+                <h1 class="text-xl md:text-2xl font-bold">Parent Profile</h1>
+            </div>
+            <nav>
+                <ul class="flex space-x-6 text-lg md:text-xl items-center">
+                    <li><a href="/parent" class="hover:text-yellow-100 transition">Dashboard</a></li>
+                    <li><a href="#" id="logoutBtn" class="hover:text-yellow-100 transition ">Logout</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <div class="content-wrapper mt-8 mb-16">
+        <div class="max-w-lg mx-auto bg-white rounded-xl shadow-md p-8">
+            <h2 class="text-2xl font-bold mb-6 text-center">Edit Profile</h2>
+            <form id="profileForm" class="space-y-6">
+                <div>
+                    <label for="name" class="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                    <input type="text" id="name" name="name" value="{{ user.name }}"
+                        class="w-full px-4 py-2 border-2 border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-blue"
+                        required>
+                    <div id="nameError" class="error-message hidden"></div>
+                </div>
+                <div>
+                    <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                    <input type="email" id="email" name="email" value="{{ user.email }}"
+                        class="w-full px-4 py-2 border-2 border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-blue">
+                    <div id="emailError" class="error-message hidden"></div>
+                </div>
+
+                <div>
+                    <label for="current_password" class="block text-sm font-medium text-gray-700 mb-1">Current Password
+                        (to save changes)</label>
+                    <div class="relative">
+                        <input type="password" id="current_password" name="current_password"
+                            class="w-full px-4 py-2 border-2 border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-blue pr-10">
+                        <button type="button"
+                            class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-600 hover:text-gray-800 focus:outline-none toggle-password"
+                            data-target="current_password">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 icon-eye" fill="none"
+                                viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 icon-eye-off hidden" fill="none"
+                                viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div>
+                    <label for="password" class="block text-sm font-medium text-gray-700 mb-1">New Password</label>
+                    <div class="relative">
+                        <input type="password" id="password" name="password"
+                            class="w-full px-4 py-2 border-2 border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-blue pr-10">
+                        <button type="button"
+                            class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-600 hover:text-gray-800 focus:outline-none toggle-password"
+                            data-target="password">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 icon-eye" fill="none"
+                                viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 icon-eye-off hidden" fill="none"
+                                viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <div>
+                    <label for="confirmPassword" class="block text-sm font-medium text-gray-700 mb-1">Confirm New
+                        Password</label>
+                    <div class="relative">
+                        <input type="password" id="confirmPassword" name="confirmPassword"
+                            class="w-full px-4 py-2 border-2 border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-blue pr-10">
+                        <button type="button"
+                            class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-600 hover:text-gray-800 focus:outline-none toggle-password"
+                            data-target="confirmPassword">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 icon-eye" fill="none"
+                                viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 icon-eye-off hidden" fill="none"
+                                viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                            </svg>
+                        </button>
+                    </div>
+                    <div id="passwordError" class="error-message hidden"></div>
+                </div>
+
+                <div class="flex justify-center">
+                    <button type="submit"
+                        class="primary-bg hover:bg-blue-600 text-white font-medium py-2 px-6 rounded-md transition">Save
+                        Changes</button>
+                </div>
+                <div id="profileSuccess" class="text-green-600 text-center mt-2 hidden"></div>
+                <div id="profileError" class="text-red-600 text-center mt-2 hidden"></div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="dark-bg text-white py-12 text-lg" style="background-color: #333333;">
+        <div class="content-wrapper">
+            <div class="mt-12 pt-8 border-t border-gray-700 text-center text-gray-400">
+                <p>&copy; 2025 Leveraging NLP for Dyslexia Identification. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Logout functionality
+        document.getElementById('logoutBtn').addEventListener('click', function () {
+            fetch('/api/logout', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/json' }
+            })
+                .then(res => res.json())
+                .then(data => {
+                    localStorage.clear();
+                    window.location.href = '/';
+                })
+                .catch(() => {
+                    localStorage.clear();
+                    window.location.href = '/';
+                });
+        });
+
+        // Password Toggle Functionality
+        document.querySelectorAll('.toggle-password').forEach(button => {
+            button.addEventListener('click', function () {
+                const targetId = this.getAttribute('data-target');
+                const input = document.getElementById(targetId);
+                const iconEye = this.querySelector('.icon-eye');
+                const iconEyeOff = this.querySelector('.icon-eye-off');
+
+                if (input.type === 'password') {
+                    input.type = 'text';
+                    iconEye.classList.add('hidden');
+                    iconEyeOff.classList.remove('hidden');
+                } else {
+                    input.type = 'password';
+                    iconEye.classList.remove('hidden');
+                    iconEyeOff.classList.add('hidden');
+                }
+            });
+        });
+
+        document.getElementById('profileForm').addEventListener('submit', function (e) {
+            e.preventDefault();
+            const name = document.getElementById('name').value.trim();
+            const email = document.getElementById('email').value.trim();
+            const currentPassword = document.getElementById('current_password').value;
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+
+            const successMsg = document.getElementById('profileSuccess');
+            const errorMsg = document.getElementById('profileError');
+            const passwordError = document.getElementById('passwordError');
+
+            successMsg.classList.add('hidden');
+            errorMsg.classList.add('hidden');
+            passwordError.classList.add('hidden');
+
+            if (password && password !== confirmPassword) {
+                passwordError.textContent = 'New passwords do not match.';
+                passwordError.classList.remove('hidden');
+                return;
+            }
+
+            fetch('/api/parent/profile', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name,
+                    email,
+                    current_password: currentPassword,
+                    new_password: password
+                })
+            })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        successMsg.textContent = 'Profile updated successfully!';
+                        successMsg.classList.remove('hidden');
+                        document.getElementById('current_password').value = '';
+                        document.getElementById('password').value = '';
+                        document.getElementById('confirmPassword').value = '';
+                    } else {
+                        errorMsg.textContent = data.message || 'Failed to update profile.';
+                        errorMsg.classList.remove('hidden');
+                    }
+                })
+                .catch(() => {
+                    errorMsg.textContent = 'Failed to update profile.';
+                    errorMsg.classList.remove('hidden');
+                });
+        });
+
+    </script>
+</body>
+
+</html>

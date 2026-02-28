@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Informed Consent - Dyslexia Research Study</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='landing_style.css') }}">
+
+</head>
+
+<body>
+    <!-- Header -->
+    <header class="primary-bg text-white py-4 md:py-6">
+        <div class="content-wrapper flex justify-between items-center px-3 sm:px-4">
+            <div class="flex items-center flex-1 min-w-0">
+                <h1 class="text-sm sm:text-base md:text-xl lg:text-2xl font-bold truncate">Leveraging NLP for Dyslexia
+                    Identification</h1>
+            </div>
+
+            <!-- Hamburger Menu Button (visible on small screens) -->
+            <button id="hamburgerBtn" class="md:hidden text-white p-2 hover:bg-blue-700 rounded transition"
+                aria-label="Toggle menu">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+            </button>
+
+            <!-- Desktop Navigation (hidden on small screens) -->
+            <nav class="hidden md:block">
+                <ul class="flex space-x-4 lg:space-x-6 text-sm md:text-base lg:text-lg items-center">
+                    <li><a href="{{ url_for('landing') }}" class="hover:text-yellow-100 transition">Homepage</a></li>
+                    <li><a href="{{ url_for('landing') }}#contact" class="hover:text-yellow-100 transition">Contact</a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Mobile Navigation Menu (slide-out) -->
+    <div id="mobileMenu" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden">
+        <div id="mobileMenuContent"
+            class="fixed right-0 top-0 h-full w-64 bg-[#1A237E] text-white transform translate-x-full transition-transform duration-300 ease-in-out shadow-lg">
+            <div class="flex justify-between items-center p-4 border-b border-blue-700">
+                <h2 class="text-lg font-bold">Menu</h2>
+                <button id="closeMobileMenu" class="text-white p-2 hover:bg-blue-700 rounded transition"
+                    aria-label="Close menu">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <nav class="p-4">
+                <ul class="space-y-4">
+                    <li><a href="{{ url_for('landing') }}"
+                            class="block py-2 px-4 hover:bg-blue-700 rounded transition">Homepage</a></li>
+                    <li><a href="{{ url_for('landing') }}#contact"
+                            class="block py-2 px-4 hover:bg-blue-700 rounded transition">Contact</a></li>
+                </ul>
+            </nav>
+        </div>
+    </div>
+
+    <!-- Accessibility Button with Label -->
+    <div class="fixed bottom-3 left-3 sm:bottom-4 sm:left-4 z-50 flex flex-col items-center space-y-1">
+
+        <!-- Button -->
+        <button id="togglePanel"
+            class="bg-[#1A237E] text-white p-2 sm:p-3 rounded-full shadow-lg hover:bg-[#3a74cc] transition border border-white"
+            aria-label="Toggle Accessibility Panel">
+            <!-- Accessibility SVG Icon -->
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 sm:h-6 sm:w-6" fill="none" viewBox="0 0 24 24"
+                stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M12 4.5c.828 0 1.5-.672 1.5-1.5S12.828 1.5 12 1.5 10.5 2.172 10.5 3s.672 1.5 1.5 1.5zM4.75 9.25l3.625.75M19.25 9.25l-3.625.75M8.375 10l.625 9m6-9l-.625 9M5.5 21.25h13" />
+            </svg>
+        </button>
+
+        <!-- Label -->
+        <span
+            class="text-xs sm:text-sm text-white bg-[#1A237E] px-1.5 sm:px-2 py-0.5 sm:py-1 rounded shadow border border-white">
+            Accessibility
+        </span>
+    </div>
+
+    <!-- Reading ruler -->
+    <div id="readingRuler" class="hidden pointer-events-none fixed top-0 left-0 w-full h-10 z-40"
+        style="background-color: rgba(58, 116, 204, 0.3);">
+    </div>
+
+    <!-- Accessibility Panel -->
+    <div id="accessibilityPanel"
+        class="hidden fixed top-0 left-0 h-screen w-full sm:w-80 bg-white shadow-lg z-50 border-l border-gray-300 overflow-y-auto p-3 sm:p-4 space-y-4 sm:space-y-6">
+
+        <!-- Panel Header -->
+        <div class="flex justify-between items-center mb-3 sm:mb-4">
+            <h2 class="text-base sm:text-lg font-semibold text-[#1A237E]">Accessibility Menu</h2>
+            <button id="closePanel"
+                class="text-xl sm:text-2xl font-bold text-gray-500 hover:text-gray-700">&times;</button>
+        </div>
+
+        <!-- Font Size -->
+        <div class="flex items-center justify-between">
+            <span>Font Size</span>
+            <div class="space-x-2">
+                <button id="fontDecrease" class="px-2 py-1 bg-gray-200 rounded">A-</button>
+                <button id="fontReset" class="px-2 py-1 bg-gray-200 rounded">Reset</button>
+                <button id="fontIncrease" class="px-2 py-1 bg-gray-200 rounded">A+</button>
+            </div>
+        </div>
+
+        <!-- Toggle Row -->
+        <div class="flex justify-between items-center">
+            <span>Dyslexic Font</span>
+            <button id="toggleDyslexic"
+                class="relative inline-flex h-6 w-11 items-center rounded-full bg-gray-300 transition-colors">
+                <span
+                    class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform translate-x-1"></span>
+            </button>
+        </div>
+
+        <div class="flex justify-between items-center">
+            <span>Monochrome</span>
+            <button id="toggleMonochrome"
+                class="relative inline-flex h-6 w-11 items-center rounded-full bg-gray-300 transition-colors">
+                <span
+                    class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform translate-x-1"></span>
+            </button>
+        </div>
+
+        <div class="flex justify-between items-center">
+            <span>Reading Ruler</span>
+            <button id="toggleRuler"
+                class="relative inline-flex h-6 w-11 items-center rounded-full bg-gray-300 transition-colors">
+                <span
+                    class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform translate-x-1"></span>
+            </button>
+        </div>
+
+        <div class="flex justify-between items-center">
+            <span>Big Cursor</span>
+            <button id="toggleCursor"
+                class="relative inline-flex h-6 w-11 items-center rounded-full bg-gray-300 transition-colors">
+                <span
+                    class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform translate-x-1"></span>
+            </button>
+        </div>
+
+    </div>
+
+    <!-- Progress Indicator -->
+    <div class="content-wrapper mt-4 sm:mt-6 md:mt-8 px-3 sm:px-4">
+        <div class="progress-indicator">
+            <div class="progress-step completed">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 sm:h-4 sm:w-4" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>
+                <span class="progress-label text-xs sm:text-sm">Sign Up</span>
+            </div>
+            <div class="progress-step completed">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 sm:h-4 sm:w-4" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>
+                <span class="progress-label text-xs sm:text-sm">Informed Consent</span>
+            </div>
+            <div class="progress-step">
+                <span class="text-xs sm:text-sm">3</span>
+                <span class="progress-label text-xs sm:text-sm">Profile Setup</span>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Demographics Questionnaire Section -->
+    <section class="py-4 sm:py-6 md:py-8">
+        <div class="content-wrapper px-3 sm:px-4">
+            <div class="bg-white rounded-lg sm:rounded-xl shadow-md overflow-hidden">
+                <div class="primary-bg text-white p-4 sm:p-5 md:p-6">
+                    <h2 class="text-lg sm:text-xl md:text-2xl font-bold">Profile setup - Demographics Questionnaire</h2>
+                    <p class="mt-2 text-sm sm:text-base text-white text-opacity-90">Please answer the following
+                        questions to help us understand our participant group.</p>
+                </div>
+                <div class="p-4 sm:p-5 md:p-6">
+                    <form id="demographicsForm" class="space-y-4 sm:space-y-5 md:space-y-6">
+                        <!-- Date of Birth -->
+                        <div>
+                            <label for="dob" class="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Date of
+                                Birth</label>
+                            <input type="date" id="dob" name="dob"
+                                class="w-full px-3 sm:px-4 py-2 border-2 border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-blue text-sm sm:text-base"
+                                required>
+                        </div>
+                        <!-- Gender -->
+                        <div>
+                            <label for="gender"
+                                class="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Gender</label>
+                            <select id="gender" name="gender"
+                                class="w-full px-3 sm:px-4 py-2 border-2 border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-blue text-sm sm:text-base"
+                                required>
+                                <option value="" disabled selected>Select your gender</option>
+                                <option value="female">Female</option>
+                                <option value="male">Male</option>
+                                <option value="nonbinary">Non-binary</option>
+                                <option value="prefer_not_to_say">Prefer not to say</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                        <!-- Native Language(s) -->
+                        <div>
+                            <label for="nativeLanguage"
+                                class="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Native
+                                Language(s)</label>
+                            <select id="nativeLanguage" name="nativeLanguage"
+                                class="w-full px-3 sm:px-4 py-2 border-2 border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-blue text-sm sm:text-base"
+                                required>
+
+                                <option value="" disabled selected>Select your native language</option>
+                                <option value="Assamese">Assamese</option>
+                                <option value="Bengali">Bengali</option>
+                                <option value="Bodo">Bodo</option>
+                                <option value="Dogri">Dogri</option>
+                                <option value="English">English</option>
+                                <option value="Gujarati">Gujarati</option>
+                                <option value="Hindi">Hindi</option>
+                                <option value="Kannada">Kannada</option>
+                                <option value="Kashmiri">Kashmiri</option>
+                                <option value="Konkani">Konkani</option>
+                                <option value="Maithili">Maithili</option>
+                                <option value="Malayalam">Malayalam</option>
+                                <option value="Marathi">Marathi</option>
+                                <option value="Meitei">Meitei</option>
+                                <option value="Nepali">Nepali</option>
+                                <option value="Odia">Odia</option>
+                                <option value="Punjabi">Punjabi</option>
+                                <option value="Sanskrit">Sanskrit</option>
+                                <option value="Santali">Santali</option>
+                                <option value="Sindhi">Sindhi</option>
+                                <option value="Tamil">Tamil</option>
+                                <option value="Telugu">Telugu</option>
+                                <option value="Urdu">Urdu</option>
+                                <option value="Other">Other (specify below)</option>
+                            </select>
+                            <input type="text" id="nativeLanguageOther" name="nativeLanguageOther"
+                                placeholder="Please specify your native language"
+                                class="hidden w-full px-3 sm:px-4 py-2 border-2 border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-blue mt-2 text-sm sm:text-base">
+                        </div>
+                        <!-- Class Level -->
+                        <div>
+                            <label for="classLevel"
+                                class="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Class Level</label>
+                            <select id="classLevel" name="classLevel"
+                                class="w-full px-3 sm:px-4 py-2 border-2 border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-blue text-sm sm:text-base"
+                                required>
+                                <option value="" disabled selected>Select your class</option>
+                                <option value="1">Class 1</option>
+                                <option value="2">Class 2</option>
+                                <option value="3">Class 3</option>
+                                <option value="4">Class 4</option>
+                                <option value="5">Class 5</option>
+                                <option value="6">Class 6</option>
+                                <option value="7">Class 7</option>
+                                <option value="8">Class 8</option>
+                                <option value="9">Class 9</option>
+                                <option value="10">Class 10</option>
+                                <option value="11">Class 11</option>
+                                <option value="12">Class 12</option>
+                            </select>
+                        </div>
+                        <!-- Self-reported Dyslexia Status -->
+                        <div>
+                            <label for="dyslexiaStatus"
+                                class="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Self-reported Dyslexia
+                                Status</label>
+                            <select id="dyslexiaStatus" name="dyslexiaStatus"
+                                class="w-full px-3 sm:px-4 py-2 border-2 border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-blue text-sm sm:text-base">
+                                <option value="" disabled selected>Select one</option>
+                                <option value="diagnosed">Diagnosed with dyslexia</option>
+                                <option value="suspected">Suspect I have dyslexia</option>
+                                <option value="control">No dyslexia (control)</option>
+                                <option value="prefer_not_to_say">Prefer not to say</option>
+                            </select>
+                        </div>
+                        <!-- Action Button -->
+                        <div class="flex justify-end">
+                            <button type="submit"
+                                class="primary-bg hover:bg-blue-600 text-white font-medium py-2 px-4 sm:px-6 rounded-md transition text-sm sm:text-base w-full sm:w-auto"
+                                style="background-color: #1A237E;">
+                                Save and Continue
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="dark-bg text-white py-8 sm:py-10 md:py-12 text-xs sm:text-sm md:text-base"
+        style="background-color: #333333;">
+        <div class="content-wrapper px-3 sm:px-4">
+            <div class="flex flex-col md:flex-row justify-between">
+                <div class="mb-6 sm:mb-8 md:mb-0">
+                    <div class="flex items-center">
+
+                        <h2 class="text-lg sm:text-xl font-bold">Dyslexia Research Initiative</h2>
+                    </div>
+                    <p class="mt-3 sm:mt-4 text-gray-400 max-w-md text-sm sm:text-base">
+                        Advancing our understanding of dyslexia through innovative research and technology to create
+                        better support systems for everyone.
+                    </p>
+                </div>
+
+                <div class="grid grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 md:gap-8">
+                    <div>
+                        <h3 class="text-base sm:text-lg font-semibold mb-3 sm:mb-4">Quick Links</h3>
+                        <ul class="space-y-2 text-sm sm:text-base">
+                            <li><a href="{{ url_for('landing') }}"
+                                    class="text-gray-400 hover:text-white transition">Homepage</a></li>
+                            <li><a href="{{ url_for('landing') }}#contact"
+                                    class="text-gray-400 hover:text-white transition">Contact</a></li>
+                        </ul>
+                    </div>
+
+                    <div>
+                        <h3 class="text-base sm:text-lg font-semibold mb-3 sm:mb-4">Resources</h3>
+                        <ul class="space-y-2 text-sm sm:text-base">
+                            <li><a href="{{ url_for('learn_more') }}#faq"
+                                    class="text-gray-400 hover:text-white transition">FAQs</a></li>
+                            <li><a href="{{ url_for('terms') }}" class="text-gray-400 hover:text-white transition">Terms
+                                    of Service</a></li>
+                            <li><a href="{{ url_for('privacy_policy') }}"
+                                    class="text-gray-400 hover:text-white transition">Privacy Policy</a></li>
+                        </ul>
+                    </div>
+
+                    <div>
+                        <h3 class="text-base sm:text-lg font-semibold mb-3 sm:mb-4">Connect</h3>
+                        <div class="flex space-x-3 sm:space-x-4">
+                            <a href="#" class="text-gray-400 hover:text-white transition">
+                                <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="currentColor" viewBox="0 0 24 24"
+                                    xmlns="http://www.w3.org/2000/svg">
+                                    <path
+                                        d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z">
+                                    </path>
+                                </svg>
+                            </a>
+                            <a href="#" class="text-gray-400 hover:text-white transition">
+                                <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="currentColor" viewBox="0 0 24 24"
+                                    xmlns="http://www.w3.org/2000/svg">
+                                    <path fill-rule="evenodd"
+                                        d="M12.315 2c2.43 0 2.784.013 3.808.06 1.064.049 1.791.218 2.427.465a4.902 4.902 0 011.772 1.153 4.902 4.902 0 011.153 1.772c.247.636.416 1.363.465 2.427.048 1.067.06 1.407.06 4.123v.08c0 2.643-.012 2.987-.06 4.043-.049 1.064-.218 1.791-.465 2.427a4.902 4.902 0 01-1.153 1.772 4.902 4.902 0 01-1.772 1.153c-.636.247-1.363.416-2.427.465-1.067.048-1.407.06-4.123.06h-.08c-2.643 0-2.987-.012-4.043-.06-1.064-.049-1.791-.218-2.427-.465a4.902 4.902 0 01-1.772-1.153 4.902 4.902 0 01-1.153-1.772c-.247-.636-.416-1.363-.465-2.427-.047-1.024-.06-1.379-.06-3.808v-.63c0-2.43.013-2.784.06-3.808.049-1.064.218-1.791.465-2.427a4.902 4.902 0 011.153-1.772A4.902 4.902 0 015.45 2.525c.636-.247 1.363-.416 2.427-.465C8.901 2.013 9.256 2 11.685 2h.63zm-.081 1.802h-.468c-2.456 0-2.784.011-3.807.058-.975.045-1.504.207-1.857.344-.467.182-.8.398-1.15.748-.35.35-.566.683-.748 1.15-.137.353-.3.882-.344 1.857-.047 1.023-.058 1.351-.058 3.807v.468c0 2.456.011 2.784.058 3.807.045.975.207 1.504.344 1.857.182.466.399.8.748 1.15.35.35.683.566 1.15.748.353.137.882.3 1.857.344 1.054.048 1.37.058 4.041.058h.08c2.597 0 2.917-.01 3.96-.058.976-.045 1.505-.207 1.858-.344.466-.182.8-.398 1.15-.748.35-.35.566-.683.748-1.15.137-.353.3-.882.344-1.857.048-1.055.058-1.37.058-4.041v-.08c0-2.597-.01-2.917-.058-3.96-.045-.976-.207-1.505-.344-1.858a3.097 3.097 0 00-.748-1.15 3.098 3.098 0 00-1.15-.748c-.353-.137-.882-.3-1.857-.344-1.023-.047-1.351-.058-3.807-.058zM12 6.865a5.135 5.135 0 110 10.27 5.135 5.135 0 010-10.27zm0 1.802a3.333 3.333 0 100 6.666 3.333 3.333 0 000-6.666zm5.338-3.205a1.2 1.2 0 110 2.4 1.2 1.2 0 010-2.4z"
+                                        clip-rule="evenodd"></path>
+                                </svg>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div
+                class="mt-8 sm:mt-10 md:mt-12 pt-6 sm:pt-8 border-t border-gray-700 text-center text-gray-400 text-xs sm:text-sm">
+                <p>&copy; 2025 Leveraging NLP for Dyslexia Identification. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+
+    <script>
+        // Mobile menu functionality
+        const hamburgerBtn = document.getElementById('hamburgerBtn');
+        const mobileMenu = document.getElementById('mobileMenu');
+        const mobileMenuContent = document.getElementById('mobileMenuContent');
+        const closeMobileMenu = document.getElementById('closeMobileMenu');
+
+        function openMobileMenu() {
+            mobileMenu.classList.remove('hidden');
+            setTimeout(() => {
+                mobileMenuContent.classList.remove('translate-x-full');
+            }, 10);
+        }
+
+        function closeMobileMenuFunc() {
+            mobileMenuContent.classList.add('translate-x-full');
+            setTimeout(() => {
+                mobileMenu.classList.add('hidden');
+            }, 300);
+        }
+
+        if (hamburgerBtn) {
+            hamburgerBtn.addEventListener('click', openMobileMenu);
+        }
+
+        if (closeMobileMenu) {
+            closeMobileMenu.addEventListener('click', closeMobileMenuFunc);
+        }
+
+        // Close menu when clicking outside
+        if (mobileMenu) {
+            mobileMenu.addEventListener('click', function (e) {
+                if (e.target === mobileMenu) {
+                    closeMobileMenuFunc();
+                }
+            });
+        }
+
+        // Close menu when clicking nav links
+        document.querySelectorAll('#mobileMenuContent a').forEach(link => {
+            link.addEventListener('click', function () {
+                closeMobileMenuFunc();
+            });
+        });
+
+        // Close menu on window resize to desktop size
+        window.addEventListener('resize', function () {
+            if (window.innerWidth >= 768) {
+                closeMobileMenuFunc();
+            }
+        });
+
+        // Accessibility functionality
+        const root = document.documentElement;
+        const panel = document.getElementById('accessibilityPanel');
+        const panelToggle = document.getElementById('togglePanel');
+        const closePanel = document.getElementById('closePanel');
+        const decreaseBtn = document.getElementById('fontDecrease');
+        const resetBtn = document.getElementById('fontReset');
+        const increaseBtn = document.getElementById('fontIncrease');
+
+        panelToggle.addEventListener('click', () => {
+            panel.classList.toggle('hidden');
+        });
+
+        closePanel.addEventListener('click', () => {
+            accessibilityPanel.classList.add('hidden');
+        });
+
+        document.addEventListener('click', function (event) {
+            const isClickInsidePanel = accessibilityPanel.contains(event.target);
+            const isClickToggleButton = togglePanel.contains(event.target);
+
+            if (!isClickInsidePanel && !isClickToggleButton) {
+                accessibilityPanel.classList.add('hidden');
+            }
+        });
+
+        function setupToggle(buttonId, classTarget, className) {
+            const button = document.getElementById(buttonId);
+            const thumb = button.querySelector('span');
+
+            button.addEventListener('click', () => {
+                const isActive = classTarget.classList.toggle(className);
+                button.classList.toggle('bg-blue-600', isActive);
+                button.classList.toggle('bg-gray-300', !isActive);
+                thumb.classList.toggle('translate-x-6', isActive);
+                thumb.classList.toggle('translate-x-1', !isActive);
+            });
+        }
+
+        setupToggle('toggleDyslexic', root, 'dyslexic-font');
+        setupToggle('toggleMonochrome', root, 'monochrome');
+        // setupToggle('toggleRuler', root, 'reading-ruler');
+        setupToggle('toggleCursor', root, 'big-cursor');
+
+        //ruler
+        const ruler = document.getElementById('readingRuler');
+        const rulerToggle = document.getElementById('toggleRuler');
+        const rulerThumb = rulerToggle.querySelector('span');
+
+        let rulerActive = false;
+
+        rulerToggle.addEventListener('click', () => {
+            rulerActive = !rulerActive;
+            ruler.classList.toggle('hidden', !rulerActive);
+
+            rulerToggle.classList.toggle('bg-blue-600', rulerActive);
+            rulerToggle.classList.toggle('bg-gray-300', !rulerActive);
+            rulerThumb.classList.toggle('translate-x-6', rulerActive);
+            rulerThumb.classList.toggle('translate-x-1', !rulerActive);
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (rulerActive) {
+                const height = ruler.offsetHeight;
+                ruler.style.top = `${e.clientY - height / 2}px`;
+            }
+        });
+        //font size
+        let currentFontSize = 16;
+        decreaseBtn.addEventListener('click', () => {
+            if (currentFontSize > 12) {
+                currentFontSize -= 1;
+                updateFontSize();
+            }
+        });
+        resetBtn.addEventListener('click', () => {
+            currentFontSize = 16;
+            updateFontSize();
+        });
+        increaseBtn.addEventListener('click', () => {
+            if (currentFontSize < 24) {
+                currentFontSize += 1;
+                updateFontSize();
+            }
+        });
+
+        function updateFontSize() {
+            document.documentElement.style.setProperty('--font-size-base', `${currentFontSize}px`);
+            document.body.style.fontSize = `${currentFontSize}px`;
+            root.style.fontSize = `${currentFontSize}px`;
+        }
+
+        // Smooth scrolling for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                document.querySelector(this.getAttribute('href')).scrollIntoView({
+                    behavior: 'smooth'
+                });
+            });
+        });
+
+        // Demographics form submission
+        const demographicsForm = document.getElementById('demographicsForm');
+        const nativeLanguageSelect = document.getElementById('nativeLanguage');
+        const nativeLanguageOther = document.getElementById('nativeLanguageOther');
+
+        // Show/hide "Other" text field based on selection
+        if (nativeLanguageSelect) {
+            nativeLanguageSelect.addEventListener('change', function () {
+                if (this.value === 'Other') {
+                    nativeLanguageOther.classList.remove('hidden');
+                    nativeLanguageOther.required = true;
+                } else {
+                    nativeLanguageOther.classList.add('hidden');
+                    nativeLanguageOther.required = false;
+                    nativeLanguageOther.value = '';
+                }
+            });
+        }
+
+        if (demographicsForm) {
+            demographicsForm.addEventListener('submit', function (e) {
+                e.preventDefault();
+
+                // Get native language value (either from dropdown or "Other" field)
+                let nativeLanguageValue = nativeLanguageSelect.value;
+                if (nativeLanguageValue === 'Other') {
+                    nativeLanguageValue = nativeLanguageOther.value;
+                }
+
+                // Collect form data
+                const data = {
+                    dob: document.getElementById('dob').value,
+                    gender: document.getElementById('gender').value,
+                    native_language: nativeLanguageValue,
+                    education_level: document.getElementById('classLevel').value,
+                    dyslexia_status: document.getElementById('dyslexiaStatus').value
+                };
+                // Send to backend
+                // Example JS after demographics POST
+                // Get child_id from URL if present
+                const urlParams = new URLSearchParams(window.location.search);
+                const childId = urlParams.get('child_id');
+                fetch('/api/demographics?child_id=' + childId, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success) {
+                            // Check if parent is logging in as child
+                            if (sessionStorage.getItem('viewing_as_child') === 'true') {
+                                // Redirect to student dashboard
+                                window.location.href = '/participant-dashboard';
+                            } else {
+                                // Regular signup flow - redirect to parent dashboard
+                                window.location.href = '/parent';
+                            }
+                        } else {
+                            alert(data.message || 'Failed to save demographics');
+                        }
+                    })
+                    .catch(() => {
+                        alert('Failed to record demographics. Please try again.');
+                    });
+            });
+        }
+
+        const langSelect = document.getElementById("nativeLanguage");
+
+        langSelect.addEventListener("focus", () => {
+            langSelect.setAttribute("size", 6);
+        });
+
+        langSelect.addEventListener("blur", () => {
+            langSelect.removeAttribute("size");
+        });
+
+
+    </script>
+</body>
+
+</html>
