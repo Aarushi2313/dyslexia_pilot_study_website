@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, session, flash, redirect, url_for, render_template, send_from_directory
+from flask import Flask, request, jsonify, session, flash, redirect, url_for, render_template, send_from_directory, make_response
 from flask_cors import CORS
 import mysql.connector
 from datetime import datetime
@@ -3167,6 +3167,137 @@ def admin_login():
             flash('Invalid admin credentials', 'error')
             return render_template('admin_login.html')
     return render_template('admin_login.html')
+
+# --- CSV Export API ---
+@app.route('/admin/export_tasks_csv', methods=['GET'])
+def admin_export_tasks_csv():
+    if not session.get('is_admin'):
+        flash('Please log in as admin to access this page', 'error')
+        return redirect(url_for('admin_login'))
+
+    import csv
+    import io
+
+    si = io.StringIO()
+    cw = csv.writer(si)
+    
+    # Write header
+    cw.writerow([
+        'Category',
+        'Class Level',
+        'Difficulty',
+        'Task Name',
+        'Passage/Content/Problem',
+        'Questions/Options/Answers'
+    ])
+
+    try:
+        conn = connect_db()
+        cursor = conn.cursor(dictionary=True)
+
+        # 1. Reading Tasks
+        cursor.execute("SELECT class_level, difficulty_level, task_name, content FROM reading_tasks ORDER BY class_level")
+        for row in cursor.fetchall():
+            cw.writerow([
+                'Reading',
+                row.get('class_level', ''),
+                row.get('difficulty_level', ''),
+                row.get('task_name', ''),
+                row.get('content', ''),
+                ''
+            ])
+
+        # 2. Typing Tasks
+        cursor.execute("SELECT class_level, difficulty_level, task_name, prompt FROM typing_tasks ORDER BY class_level")
+        for row in cursor.fetchall():
+            cw.writerow([
+                'Typing',
+                row.get('class_level', ''),
+                row.get('difficulty_level', ''),
+                row.get('task_name', ''),
+                row.get('prompt', ''),
+                ''
+            ])
+
+        # 3. Writing Tasks
+        cursor.execute("SELECT class_level, difficulty_level, task_name, prompt FROM writing_tasks ORDER BY class_level")
+        for row in cursor.fetchall():
+            cw.writerow([
+                'Writing',
+                row.get('class_level', ''),
+                row.get('difficulty_level', ''),
+                row.get('task_name', ''),
+                row.get('prompt', ''),
+                ''
+            ])
+
+        # 4. Reading Comprehension Tasks
+        cursor.execute("SELECT * FROM reading_comprehension_tasks ORDER BY class_level")
+        for row in cursor.fetchall():
+            q_details = (f"Q1: {row.get('question1', '')} (Options: {row.get('answer1_options', '')}, Ans: {row.get('answer1', '')})\n"
+                         f"Q2: {row.get('question2', '')} (Options: {row.get('answer2_options', '')}, Ans: {row.get('answer2', '')})\n"
+                         f"Q3: {row.get('question3', '')} (Type: {row.get('answer3_type', '')})")
+            cw.writerow([
+                'Reading Comprehension',
+                row.get('class_level', ''),
+                row.get('difficulty_level', ''),
+                row.get('task_name', ''),
+                row.get('passage', ''),
+                q_details
+            ])
+
+        # 5. Mathematical Comprehension Tasks
+        cursor.execute("SELECT * FROM mathematical_comprehension_tasks ORDER BY class_level")
+        for row in cursor.fetchall():
+            q_details = (f"Q1: {row.get('question1', '')} (Options: {row.get('answer1_options', '')}, Ans: {row.get('answer1', '')})\n"
+                         f"Q2: {row.get('question2', '')} (Options: {row.get('answer2_options', '')}, Ans: {row.get('answer2', '')})\n"
+                         f"Q3: {row.get('question3', '')} (Type: {row.get('answer3_type', '')}, Ans: {row.get('answer3', '')})")
+            cw.writerow([
+                'Mathematical Comprehension',
+                row.get('class_level', ''),
+                row.get('difficulty_level', ''),
+                row.get('task_name', ''),
+                row.get('problem_text', ''),
+                q_details
+            ])
+
+        # 6. Aptitude Tasks
+        cursor.execute("SELECT * FROM aptitude_tasks ORDER BY class_level")
+        for row in cursor.fetchall():
+            if row.get('logical_question'):
+                q_details = (f"Logical: {row.get('logical_question', '')} (Options: {row.get('logical_question_options', '')}, Ans: {row.get('logical_answer', '')})\n"
+                             f"Numerical: {row.get('numerical_question', '')} (Options: {row.get('numerical_question_options', '')}, Ans: {row.get('numerical_answer', '')})\n"
+                             f"Verbal: {row.get('verbal_question', '')} (Options: {row.get('verbal_question_options', '')}, Ans: {row.get('verbal_answer', '')})\n"
+                             f"Spatial: {row.get('spatial_question', '')} (Options: {row.get('spatial_question_options', '')}, Ans: {row.get('spatial_answer', '')})")
+            else:
+                q_details = (f"Logical 1: {row.get('logical_question1', '')} (Options: {row.get('logical_question1_options', '')})\n"
+                             f"Logical 2: {row.get('logical_question2', '')} (Options: {row.get('logical_question2_options', '')})\n"
+                             f"Numerical 1: {row.get('numerical_question1', '')} (Options: {row.get('numerical_question1_options', '')})\n"
+                             f"Numerical 2: {row.get('numerical_question2', '')} (Options: {row.get('numerical_question2_options', '')})\n"
+                             f"Verbal 1: {row.get('verbal_question1', '')} (Options: {row.get('verbal_question1_options', '')})\n"
+                             f"Verbal 2: {row.get('verbal_question2', '')} (Options: {row.get('verbal_question2_options', '')})\n"
+                             f"Spatial 1: {row.get('spatial_question1', '')} (Options: {row.get('spatial_question1_options', '')})\n"
+                             f"Spatial 2: {row.get('spatial_question2', '')} (Options: {row.get('spatial_question2_options', '')})")
+            cw.writerow([
+                'Aptitude',
+                row.get('class_level', ''),
+                row.get('difficulty_level', ''),
+                row.get('task_name', ''),
+                '',
+                q_details
+            ])
+
+        cursor.close()
+        conn.close()
+
+    except Exception as e:
+        print(f"Export tasks to CSV error: {e}")
+        return jsonify({'success': False, 'message': 'Failed to generate CSV'}), 500
+
+    output = make_response(si.getvalue())
+    output.headers["Content-Disposition"] = "attachment; filename=all_tasks.csv"
+    output.headers["Content-type"] = "text/csv"
+    return output
 
 # --- Task status API ---
 @app.route('/api/user-tasks', methods=['GET'])
