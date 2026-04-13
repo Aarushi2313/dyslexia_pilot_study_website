@@ -296,7 +296,7 @@
         if (taskName === 'Writing Task') return 'task5.html';
         // Note: Aptitude test was previously pointing to task6.html, ensuring it points to aptitude.html if that is the new standard
         // Based on previous edits, aptitude.html was refactored.
-        if (taskName === 'Aptitude Test') return 'task6.html';
+        if (taskName === 'Aptitude Test') return 'aptitude.html';
 
         else {
             const safeName = taskName.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');

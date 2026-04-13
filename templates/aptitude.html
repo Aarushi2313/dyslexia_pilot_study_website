@@ -138,6 +138,12 @@
                 <button
                     class="section-nav px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm md:text-base font-medium transition"
                     data-section="spatial"><span class="hidden sm:inline">Spatial </span>Reasoning</button>
+                <button
+                    class="section-nav px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm md:text-base font-medium transition"
+                    data-section="listening"><span class="hidden sm:inline">Listening </span>Task</button>
+                <button
+                    class="section-nav px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm md:text-base font-medium transition"
+                    data-section="visual"><span class="hidden sm:inline">Visual </span>Task</button>
             </div>
         </div>
 
@@ -252,6 +258,59 @@
             </div>
         </div>
 
+        <!-- Listening Task Section -->
+        <div id="listeningSection" class="question-container">
+            <div class="bg-white rounded-lg sm:rounded-xl shadow-md p-4 sm:p-6 md:p-8 mb-4 sm:mb-6 md:mb-8">
+                <h3 class="text-lg sm:text-xl md:text-2xl font-bold mb-4 sm:mb-5 md:mb-6 text-center text-gray-800">
+                    Listening Task</h3>
+                <div class="max-w-2xl mx-auto">
+                    <div class="media-container mb-6 text-center" style="display:none;">
+                        <audio controls class="w-full max-w-md mx-auto">
+                            <source src="" type="audio/mpeg">
+                            Your browser does not support the audio element.
+                        </audio>
+                    </div>
+                    <div class="question mb-6 sm:mb-8">
+                        <p class="text-sm sm:text-base md:text-lg font-medium mb-3 sm:mb-4">1. Question 1</p>
+                        <div class="grid grid-cols-2 gap-2 sm:gap-3 md:gap-4"></div>
+                    </div>
+                    <div class="question mb-6 sm:mb-8">
+                        <p class="text-sm sm:text-base md:text-lg font-medium mb-3 sm:mb-4">2. Question 2</p>
+                        <div class="grid grid-cols-2 gap-2 sm:gap-3 md:gap-4"></div>
+                    </div>
+                    <div class="question mb-6 sm:mb-8">
+                        <p class="text-sm sm:text-base md:text-lg font-medium mb-3 sm:mb-4">3. Subjective Question</p>
+                        <textarea class="subjective-input w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition" rows="4" placeholder="Type your answer here..."></textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Visual Task Section -->
+        <div id="visualSection" class="question-container">
+            <div class="bg-white rounded-lg sm:rounded-xl shadow-md p-4 sm:p-6 md:p-8 mb-4 sm:mb-6 md:mb-8">
+                <h3 class="text-lg sm:text-xl md:text-2xl font-bold mb-4 sm:mb-5 md:mb-6 text-center text-gray-800">
+                    Visual Task</h3>
+                <div class="max-w-2xl mx-auto">
+                    <div class="media-container mb-6 text-center" style="display:none;">
+                        <img src="" alt="Visual Task Image" class="max-w-full h-auto rounded-lg mx-auto shadow-md max-h-80">
+                    </div>
+                    <div class="question mb-6 sm:mb-8">
+                        <p class="text-sm sm:text-base md:text-lg font-medium mb-3 sm:mb-4">1. Question 1</p>
+                        <div class="grid grid-cols-2 gap-2 sm:gap-3 md:gap-4"></div>
+                    </div>
+                    <div class="question mb-6 sm:mb-8">
+                        <p class="text-sm sm:text-base md:text-lg font-medium mb-3 sm:mb-4">2. Question 2</p>
+                        <div class="grid grid-cols-2 gap-2 sm:gap-3 md:gap-4"></div>
+                    </div>
+                    <div class="question mb-6 sm:mb-8">
+                        <p class="text-sm sm:text-base md:text-lg font-medium mb-3 sm:mb-4">3. Subjective Question</p>
+                        <textarea class="subjective-input w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition" rows="4" placeholder="Type your answer here..."></textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Action Buttons -->
         <div class="bg-white rounded-lg sm:rounded-xl shadow-md p-4 sm:p-5 md:p-6">
             <div class="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 sm:gap-4">
@@ -333,6 +392,76 @@
 
         // Update spatial reasoning section
         updateQuestionSection('spatial', task.spatial_question, task.spatial_question_options);
+
+        // Update listening section
+        updateMediaSection('listening', task.listening_audio_url, 'audio', task.listening_q1, task.listening_q1_options, task.listening_q2, task.listening_q2_options, task.listening_q3);
+
+        // Update visual section
+        updateMediaSection('visual', task.visual_image_url, 'image', task.visual_q1, task.visual_q1_options, task.visual_q2, task.visual_q2_options, task.visual_q3);
+    }
+
+    function updateOptions(questionEl, options) {
+        try {
+            if (typeof options === 'string') options = JSON.parse(options);
+        } catch (e) { options = []; }
+        if (options && Array.isArray(options)) {
+            const container = questionEl.querySelector('.grid, .space-y-3');
+            if (container) {
+                container.innerHTML = '';
+                options.forEach(opt => {
+                    const btn = document.createElement('button');
+                    btn.className = 'option-btn p-3 sm:p-4 border-2 border-gray-300 rounded-lg text-sm sm:text-base text-center hover:border-blue-500';
+                    btn.setAttribute('data-value', opt);
+                    btn.textContent = opt;
+                    container.appendChild(btn);
+                });
+            }
+        }
+    }
+
+    function updateMediaSection(sectionName, mediaUrl, mediaType, q1, o1, q2, o2, q3) {
+        const section = document.getElementById(sectionName + 'Section');
+        if (!section) return;
+
+        if (mediaType === 'audio') {
+            const mediaEl = section.querySelector('audio');
+            if (mediaEl && mediaUrl) {
+                let staticUrl = mediaUrl.startsWith('/static/') ? mediaUrl : '/static/' + mediaUrl;
+                mediaEl.src = staticUrl;
+                mediaEl.closest('.media-container').style.display = 'block';
+            } else if (mediaEl) {
+                mediaEl.closest('.media-container').style.display = 'none';
+            }
+        } else if (mediaType === 'image') {
+            const mediaEl = section.querySelector('img');
+            if (mediaEl && mediaUrl) {
+                let staticUrl = mediaUrl.startsWith('/static/') ? mediaUrl : '/static/' + mediaUrl;
+                mediaEl.src = staticUrl;
+                mediaEl.closest('.media-container').style.display = 'block';
+            } else if (mediaEl) {
+                mediaEl.closest('.media-container').style.display = 'none';
+            }
+        }
+
+        const questions = section.querySelectorAll('.question');
+        if (questions[0] && q1) {
+            questions[0].querySelector('p').textContent = '1. ' + q1;
+            updateOptions(questions[0], o1);
+        }
+        if (questions[1] && q2) {
+            questions[1].style.display = 'block';
+            questions[1].querySelector('p').textContent = '2. ' + q2;
+            updateOptions(questions[1], o2);
+        } else if (questions[1]) {
+            questions[1].style.display = 'none';
+        }
+        
+        if (questions[2] && q3) {
+            questions[2].style.display = 'block';
+            questions[2].querySelector('p').textContent = '3. ' + q3;
+        } else if (questions[2]) {
+            questions[2].style.display = 'none';
+        }
     }
 
     // Update a question section with new question and options
@@ -350,26 +479,7 @@
             }
 
             // Update options
-            try {
-                if (typeof options === 'string') {
-                    options = JSON.parse(options);
-                }
-            } catch (e) {
-                options = [];
-            }
-            if (options && Array.isArray(options)) {
-                const optionsContainer = questions[0].querySelector('.grid, .space-y-3');
-                if (optionsContainer) {
-                    optionsContainer.innerHTML = '';
-                    options.forEach((option, index) => {
-                        const button = document.createElement('button');
-                        button.className = 'option-btn p-4 border-2 border-gray-300 rounded-lg text-center hover:border-blue-500';
-                        button.setAttribute('data-value', option);
-                        button.textContent = option;
-                        optionsContainer.appendChild(button);
-                    });
-                }
-            }
+            updateOptions(questions[0], options);
         }
 
         // Hide the second question if it exists
@@ -486,9 +596,11 @@
         logical: {},
         numerical: {},
         verbal: {},
-        spatial: {}
+        spatial: {},
+        listening: {},
+        visual: {}
     };
-    let totalQuestions = 4; // 1 question per section
+    let totalQuestions = 10; // 4 basic + 3 listening + 3 visual
     let answeredQuestions = 0;
 
     // DOM elements
@@ -543,7 +655,8 @@
     document.addEventListener('click', (e) => {
         if (e.target.classList.contains('option-btn')) {
             const questionContainer = e.target.closest('.question');
-            const questionIndex = Array.from(questionContainer.parentNode.children).indexOf(questionContainer);
+            const questionNodes = Array.from(questionContainer.parentNode.children).filter(el => el.classList.contains('question'));
+            const questionIndex = questionNodes.indexOf(questionContainer);
             const section = currentSection;
 
             // Remove previous selection from this question
@@ -557,6 +670,24 @@
             // Store answer
             answers[section][questionIndex] = e.target.dataset.value;
 
+            updateProgress();
+        }
+    });
+
+    // Handle subjective input
+    document.addEventListener('input', (e) => {
+        if (e.target.classList.contains('subjective-input')) {
+            const questionContainer = e.target.closest('.question');
+            const questionNodes = Array.from(questionContainer.parentNode.children).filter(el => el.classList.contains('question'));
+            const questionIndex = questionNodes.indexOf(questionContainer);
+            const section = currentSection;
+
+            const val = e.target.value.trim();
+            if (val !== '') {
+                answers[section][questionIndex] = val;
+            } else {
+                delete answers[section][questionIndex];
+            }
             updateProgress();
         }
     });
@@ -589,6 +720,8 @@
             numerical_ability_score: 0,
             verbal_ability_score: 0,
             spatial_reasoning_score: 0,
+            listening_task_score: 0,
+            visual_task_score: 0,
             total_score: 0
         };
 
@@ -600,31 +733,117 @@
         // Normalize helper
         const norm = v => (v == null ? '' : String(v).trim().toLowerCase());
 
+        const parseOptions = (optionsStr) => {
+            try {
+                if (typeof optionsStr === 'string') return JSON.parse(optionsStr);
+                if (Array.isArray(optionsStr)) return optionsStr;
+            } catch (e) {}
+            return [];
+        };
+
+        // Validate answer helper (prevents null == null false positives and maps A/B/C/D to options)
+        const checkAnswer = (selected, expected, optionsStr) => {
+            if (!expected || norm(expected) === '') return false;
+            let eNorm = norm(expected);
+            if (norm(selected) === eNorm) return true;
+            
+            const options = parseOptions(optionsStr);
+            if (options && options.length > 0) {
+                if (eNorm.length === 1 && eNorm >= 'a' && eNorm <= 'd') {
+                    const idx = eNorm.charCodeAt(0) - 97;
+                    if (idx >= 0 && idx < options.length) {
+                        return norm(selected) === norm(options[idx]);
+                    }
+                }
+            }
+            return false;
+        };
+
         // One question per section → correct if selected equals *_answer
         const logicalSelected = answers.logical && answers.logical[0];
-        if (norm(logicalSelected) === norm(currentAptitudeTask.logical_answer)) {
-            scores.logical_reasoning_score = 1;
+        if (currentAptitudeTask.logical_question) {
+            if (checkAnswer(logicalSelected, currentAptitudeTask.logical_answer, currentAptitudeTask.logical_question_options)) {
+                scores.logical_reasoning_score = 1;
+            }
+        } else {
+            // Fallback expected answer: 42
+            if (checkAnswer(logicalSelected, '42')) {
+                scores.logical_reasoning_score = 1;
+            }
         }
 
         const numericalSelected = answers.numerical && answers.numerical[0];
-        if (norm(numericalSelected) === norm(currentAptitudeTask.numerical_answer)) {
-            scores.numerical_ability_score = 1;
+        if (currentAptitudeTask.numerical_question) {
+            if (checkAnswer(numericalSelected, currentAptitudeTask.numerical_answer, currentAptitudeTask.numerical_question_options)) {
+                scores.numerical_ability_score = 1;
+            }
+        } else {
+            // Fallback expected answer: 20
+            if (checkAnswer(numericalSelected, '20')) {
+                scores.numerical_ability_score = 1;
+            }
         }
 
         const verbalSelected = answers.verbal && answers.verbal[0];
-        if (norm(verbalSelected) === norm(currentAptitudeTask.verbal_answer)) {
-            scores.verbal_ability_score = 1;
+        if (currentAptitudeTask.verbal_question) {
+            if (checkAnswer(verbalSelected, currentAptitudeTask.verbal_answer, currentAptitudeTask.verbal_question_options)) {
+                scores.verbal_ability_score = 1;
+            }
+        } else {
+            // Fallback expected answer: eating
+            if (checkAnswer(verbalSelected, 'eating')) {
+                scores.verbal_ability_score = 1;
+            }
         }
 
         const spatialSelected = answers.spatial && answers.spatial[0];
-        if (norm(spatialSelected) === norm(currentAptitudeTask.spatial_answer)) {
-            scores.spatial_reasoning_score = 1;
+        if (currentAptitudeTask.spatial_question) {
+            if (checkAnswer(spatialSelected, currentAptitudeTask.spatial_answer, currentAptitudeTask.spatial_question_options)) {
+                scores.spatial_reasoning_score = 1;
+            }
+        } else {
+            // Fallback expected answer: 4
+            if (checkAnswer(spatialSelected, '4')) {
+                scores.spatial_reasoning_score = 1;
+            }
         }
+        
+        const listeningQ1 = answers.listening && answers.listening[0];
+        if (currentAptitudeTask.listening_q1) {
+            if (checkAnswer(listeningQ1, currentAptitudeTask.listening_q1_answer, currentAptitudeTask.listening_q1_options)) {
+                scores.listening_task_score += 1;
+            }
+        }
+        
+        const listeningQ2 = answers.listening && answers.listening[1];
+        if (currentAptitudeTask.listening_q2) {
+            if (checkAnswer(listeningQ2, currentAptitudeTask.listening_q2_answer, currentAptitudeTask.listening_q2_options)) {
+                scores.listening_task_score += 1;
+            }
+        }
+
+        const visualQ1 = answers.visual && answers.visual[0];
+        if (currentAptitudeTask.visual_q1) {
+            if (checkAnswer(visualQ1, currentAptitudeTask.visual_q1_answer, currentAptitudeTask.visual_q1_options)) {
+                scores.visual_task_score += 1;
+            }
+        }
+        
+        const visualQ2 = answers.visual && answers.visual[1];
+        if (currentAptitudeTask.visual_q2) {
+            if (checkAnswer(visualQ2, currentAptitudeTask.visual_q2_answer, currentAptitudeTask.visual_q2_options)) {
+                scores.visual_task_score += 1;
+            }
+        }
+        
+        scores.max_score = 8; // Enforce strict 8-point limit
 
         scores.total_score = scores.logical_reasoning_score
             + scores.numerical_ability_score
             + scores.verbal_ability_score
-            + scores.spatial_reasoning_score;
+            + scores.spatial_reasoning_score
+            + scores.listening_task_score
+            + scores.visual_task_score;
 
         return scores;
     }
@@ -851,10 +1070,16 @@
                                 const qEl = questions[qIndex];
                                 if (!qEl) return;
                                 const val = answers[sectionKey][idx];
+                                
                                 const btn = qEl.querySelector(`.option-btn[data-value="${val}"]`);
                                 if (btn) {
                                     qEl.querySelectorAll('.option-btn').forEach(b => b.classList.remove('selected'));
                                     btn.classList.add('selected');
+                                } else {
+                                    const ta = qEl.querySelector('.subjective-input');
+                                    if (ta) {
+                                        ta.value = val;
+                                    }
                                 }
                             });
                         });

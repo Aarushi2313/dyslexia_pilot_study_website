@@ -257,7 +257,7 @@ def calculate_reading_accuracy(ground_truth, transcribed_text):
 # Ensure suggested_tasks table exists after DB connector is defined
 ensure_suggested_tasks_table()
 
-UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), 'uploads')
+UPLOAD_FOLDER = '/mnt/LS226/aditya_dyslexia_data/uploads'
 ALLOWED_EXTENSIONS = {'wav', 'webm', 'mp3', 'ogg', 'm4a', 'jpg', 'jpeg', 'png', 'gif', 'bmp', 'tiff', 'webp'}
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
@@ -2861,20 +2861,26 @@ def admin_category_tasks(category_slug: str):
                         """
                         INSERT INTO aptitude_tasks (
                         task_name, class_level, difficulty_level, instructions, estimated_time,
-                        logical_question, logical_question_options,
-                        numerical_question, numerical_question_options,
-                        verbal_question, verbal_question_options,
-                        spatial_question, spatial_question_options
+                        logical_question, logical_question_options, logical_answer,
+                        numerical_question, numerical_question_options, numerical_answer,
+                        verbal_question, verbal_question_options, verbal_answer,
+                        spatial_question, spatial_question_options, spatial_answer,
+                        listening_audio_url, listening_q1, listening_q1_options, listening_q1_answer, listening_q2, listening_q2_options, listening_q2_answer, listening_q3, listening_q3_answer,
+                        visual_image_url, visual_q1, visual_q1_options, visual_q1_answer, visual_q2, visual_q2_options, visual_q2_answer, visual_q3, visual_q3_answer
                     )
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                         """,
                         (
                             data.get('task_name'), data.get('class_level'), data.get('difficulty_level'),
                         data.get('instructions'), data.get('estimated_time'),
-                        data.get('logical_question'), _json.dumps(data.get('logical_question_options') or []),
-                        data.get('numerical_question'), _json.dumps(data.get('numerical_question_options') or []),
-                        data.get('verbal_question'), _json.dumps(data.get('verbal_question_options') or []),
-                        data.get('spatial_question'), _json.dumps(data.get('spatial_question_options') or [])
+                        data.get('logical_question'), _json.dumps(data.get('logical_question_options') or []), data.get('logical_answer'),
+                        data.get('numerical_question'), _json.dumps(data.get('numerical_question_options') or []), data.get('numerical_answer'),
+                        data.get('verbal_question'), _json.dumps(data.get('verbal_question_options') or []), data.get('verbal_answer'),
+                        data.get('spatial_question'), _json.dumps(data.get('spatial_question_options') or []), data.get('spatial_answer'),
+                        data.get('listening_audio_url'), data.get('listening_q1'), _json.dumps(data.get('listening_q1_options') or []), data.get('listening_q1_answer'),
+                        data.get('listening_q2'), _json.dumps(data.get('listening_q2_options') or []), data.get('listening_q2_answer'), data.get('listening_q3'), data.get('listening_q3_answer'),
+                        data.get('visual_image_url'), data.get('visual_q1'), _json.dumps(data.get('visual_q1_options') or []), data.get('visual_q1_answer'),
+                        data.get('visual_q2'), _json.dumps(data.get('visual_q2_options') or []), data.get('visual_q2_answer'), data.get('visual_q3'), data.get('visual_q3_answer')
                         )
                     )
             conn.commit()
@@ -3060,25 +3066,30 @@ def admin_category_task_detail(category_slug: str, task_id: int):
                     cursor.execute(
                         """
                         UPDATE aptitude_tasks SET 
-                            task_name=%s, age_min=%s, age_max=%s, difficulty_level=%s, instructions=%s, estimated_time=%s, example=%s,
-                            logical_question1=%s, logical_question1_options=%s, logical_question2=%s, logical_question2_options=%s,
-                            numerical_question1=%s, numerical_question1_options=%s, numerical_question2=%s, numerical_question2_options=%s,
-                            verbal_question1=%s, verbal_question1_options=%s, verbal_question2=%s, verbal_question2_options=%s,
-                            spatial_question1=%s, spatial_question1_options=%s, spatial_question2=%s, spatial_question2_options=%s
+                            task_name=%s, class_level=%s, difficulty_level=%s, instructions=%s, estimated_time=%s,
+                            logical_question=%s, logical_question_options=%s, logical_answer=%s,
+                            numerical_question=%s, numerical_question_options=%s, numerical_answer=%s,
+                            verbal_question=%s, verbal_question_options=%s, verbal_answer=%s,
+                            spatial_question=%s, spatial_question_options=%s, spatial_answer=%s,
+                            listening_audio_url=%s, listening_q1=%s, listening_q1_options=%s, listening_q1_answer=%s, listening_q2=%s, listening_q2_options=%s, listening_q2_answer=%s, listening_q3=%s, listening_q3_answer=%s,
+                            visual_image_url=%s, visual_q1=%s, visual_q1_options=%s, visual_q1_answer=%s, visual_q2=%s, visual_q2_options=%s, visual_q2_answer=%s, visual_q3=%s, visual_q3_answer=%s
                         WHERE id=%s
                         """,
                         (
-                            existing.get('task_name'), existing.get('age_min'), existing.get('age_max'), existing.get('difficulty_level'),
+                            data.get('task_name', existing.get('task_name')), data.get('class_level', existing.get('class_level')), data.get('difficulty_level', existing.get('difficulty_level')),
                             data.get('instructions', existing.get('instructions')), data.get('estimated_time', existing.get('estimated_time')), 
-                            data.get('example', existing.get('example')),
-                            data.get('logical_question1', existing.get('logical_question1')), _json.dumps(data.get('logical_question1_options', existing.get('logical_question1_options') or [])),
-                            data.get('logical_question2', existing.get('logical_question2')), _json.dumps(data.get('logical_question2_options', existing.get('logical_question2_options') or [])),
-                            data.get('numerical_question1', existing.get('numerical_question1')), _json.dumps(data.get('numerical_question1_options', existing.get('numerical_question1_options') or [])),
-                            data.get('numerical_question2', existing.get('numerical_question2')), _json.dumps(data.get('numerical_question2_options', existing.get('numerical_question2_options') or [])),
-                            data.get('verbal_question1', existing.get('verbal_question1')), _json.dumps(data.get('verbal_question1_options', existing.get('verbal_question1_options') or [])),
-                            data.get('verbal_question2', existing.get('verbal_question2')), _json.dumps(data.get('verbal_question2_options', existing.get('verbal_question2_options') or [])),
-                            data.get('spatial_question1', existing.get('spatial_question1')), _json.dumps(data.get('spatial_question1_options', existing.get('spatial_question1_options') or [])),
-                            data.get('spatial_question2', existing.get('spatial_question2')), _json.dumps(data.get('spatial_question2_options', existing.get('spatial_question2_options') or [])),
+                            data.get('logical_question', existing.get('logical_question')), _json.dumps(data.get('logical_question_options', existing.get('logical_question_options') or [])), data.get('logical_answer', existing.get('logical_answer')),
+                            data.get('numerical_question', existing.get('numerical_question')), _json.dumps(data.get('numerical_question_options', existing.get('numerical_question_options') or [])), data.get('numerical_answer', existing.get('numerical_answer')),
+                            data.get('verbal_question', existing.get('verbal_question')), _json.dumps(data.get('verbal_question_options', existing.get('verbal_question_options') or [])), data.get('verbal_answer', existing.get('verbal_answer')),
+                            data.get('spatial_question', existing.get('spatial_question')), _json.dumps(data.get('spatial_question_options', existing.get('spatial_question_options') or [])), data.get('spatial_answer', existing.get('spatial_answer')),
+                            data.get('listening_audio_url', existing.get('listening_audio_url')),
+                            data.get('listening_q1', existing.get('listening_q1')), _json.dumps(data.get('listening_q1_options', existing.get('listening_q1_options') or [])), data.get('listening_q1_answer', existing.get('listening_q1_answer')),
+                            data.get('listening_q2', existing.get('listening_q2')), _json.dumps(data.get('listening_q2_options', existing.get('listening_q2_options') or [])), data.get('listening_q2_answer', existing.get('listening_q2_answer')),
+                            data.get('listening_q3', existing.get('listening_q3')), data.get('listening_q3_answer', existing.get('listening_q3_answer')),
+                            data.get('visual_image_url', existing.get('visual_image_url')),
+                            data.get('visual_q1', existing.get('visual_q1')), _json.dumps(data.get('visual_q1_options', existing.get('visual_q1_options') or [])), data.get('visual_q1_answer', existing.get('visual_q1_answer')),
+                            data.get('visual_q2', existing.get('visual_q2')), _json.dumps(data.get('visual_q2_options', existing.get('visual_q2_options') or [])), data.get('visual_q2_answer', existing.get('visual_q2_answer')),
+                            data.get('visual_q3', existing.get('visual_q3')), data.get('visual_q3_answer', existing.get('visual_q3_answer')),
                             task_id
                         )
                     )
@@ -4666,6 +4677,8 @@ def save_aptitude_progress():
     numerical_ability_score = _to01(data.get('numerical_ability_score', 0))
     verbal_ability_score = _to01(data.get('verbal_ability_score', 0))
     spatial_reasoning_score = _to01(data.get('spatial_reasoning_score', 0))
+    listening_task_score = int(data.get('listening_task_score', 0) or 0)
+    visual_task_score = int(data.get('visual_task_score', 0) or 0)
     total_score = int(data.get('total_score', 0) or 0)
     answers = data.get('answers')
     current_section = data.get('current_section')
@@ -4730,7 +4743,7 @@ def save_aptitude_progress():
         # Debug the SQL parameters
         sql_params = (
             attempt_id, logical_reasoning_score, numerical_ability_score,
-            verbal_ability_score, spatial_reasoning_score, total_score,
+            verbal_ability_score, spatial_reasoning_score, listening_task_score, visual_task_score, total_score,
             'In Progress', answers_json,
             current_section, answered_count, progress_percent
         )
@@ -4739,15 +4752,17 @@ def save_aptitude_progress():
         cursor.execute("""
             INSERT INTO aptitude_progress (
                 attempt_id, logical_reasoning_score, numerical_ability_score, 
-                verbal_ability_score, spatial_reasoning_score, total_score, 
+                verbal_ability_score, spatial_reasoning_score, listening_task_score, visual_task_score, total_score, 
                 status, answers, current_section, answered_count, progress_percent, updated_at
             )
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW())
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW())
             ON DUPLICATE KEY UPDATE 
                 logical_reasoning_score=VALUES(logical_reasoning_score), 
                 numerical_ability_score=VALUES(numerical_ability_score), 
                 verbal_ability_score=VALUES(verbal_ability_score), 
                 spatial_reasoning_score=VALUES(spatial_reasoning_score), 
+                listening_task_score=VALUES(listening_task_score),
+                visual_task_score=VALUES(visual_task_score),
                 total_score=VALUES(total_score), 
                 status=VALUES(status), 
                 answers=VALUES(answers),
@@ -4809,6 +4824,7 @@ def get_aptitude_progress():
                 uta.completed_at,
                 ap.logical_reasoning_score, ap.numerical_ability_score, 
                 ap.verbal_ability_score, ap.spatial_reasoning_score, 
+                ap.listening_task_score, ap.visual_task_score,
                 ap.total_score, ap.status as progress_status, 
                 ap.answers, ap.current_section, ap.answered_count, 
                 ap.progress_percent, ap.updated_at
@@ -4833,6 +4849,8 @@ def get_aptitude_progress():
                     'numerical_ability_score': result.get('numerical_ability_score', 0),
                     'verbal_ability_score': result.get('verbal_ability_score', 0),
                     'spatial_reasoning_score': result.get('spatial_reasoning_score', 0),
+                    'listening_task_score': result.get('listening_task_score', 0),
+                    'visual_task_score': result.get('visual_task_score', 0),
                     'total_score': result.get('total_score', 0),
                     'status': result.get('progress_status', 'In Progress'),
                     'answers': result.get('answers'),
@@ -4857,11 +4875,13 @@ def submit_aptitude():
     
     data = request.get_json()
     task_name = data.get('task_name', 'Aptitude Test')
-    logical_reasoning_score = data.get('logical_reasoning_score', 0)
-    numerical_ability_score = data.get('numerical_ability_score', 0)
-    verbal_ability_score = data.get('verbal_ability_score', 0)
-    spatial_reasoning_score = data.get('spatial_reasoning_score', 0)
-    total_score = data.get('total_score', 0)
+    logical_reasoning_score = int(data.get('logical_reasoning_score', 0) or 0)
+    numerical_ability_score = int(data.get('numerical_ability_score', 0) or 0)
+    verbal_ability_score = int(data.get('verbal_ability_score', 0) or 0)
+    spatial_reasoning_score = int(data.get('spatial_reasoning_score', 0) or 0)
+    listening_task_score = int(data.get('listening_task_score', 0) or 0)
+    visual_task_score = int(data.get('visual_task_score', 0) or 0)
+    total_score = int(data.get('total_score', 0) or 0)
     answers = data.get('answers')
     current_section = data.get('current_section')
     answered_count = data.get('answered_count', 0)
@@ -4906,22 +4926,25 @@ def submit_aptitude():
         # Calculate total score as sum of all section scores
         calculated_total_score = (
             logical_reasoning_score + numerical_ability_score +
-            verbal_ability_score + spatial_reasoning_score
+            verbal_ability_score + spatial_reasoning_score +
+            listening_task_score + visual_task_score
         )
-        max_score = 4  # Aptitude test has 4 sections, 1 point each
+        max_score = int(data.get('max_score', 8) or 8)
         
         cursor.execute("""
             INSERT INTO aptitude_progress (
                 attempt_id, logical_reasoning_score, numerical_ability_score, 
-                verbal_ability_score, spatial_reasoning_score, total_score, max_score,
+                verbal_ability_score, spatial_reasoning_score, listening_task_score, visual_task_score, total_score, max_score,
                 status, answers, current_section, answered_count, progress_percent, updated_at
             )
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW())
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW())
             ON DUPLICATE KEY UPDATE 
                 logical_reasoning_score=VALUES(logical_reasoning_score), 
                 numerical_ability_score=VALUES(numerical_ability_score), 
                 verbal_ability_score=VALUES(verbal_ability_score), 
                 spatial_reasoning_score=VALUES(spatial_reasoning_score), 
+                listening_task_score=VALUES(listening_task_score),
+                visual_task_score=VALUES(visual_task_score),
                 total_score=VALUES(total_score), 
                 max_score=VALUES(max_score),
                 status='Completed',
@@ -4932,7 +4955,7 @@ def submit_aptitude():
                 updated_at=NOW()
         """, (
             attempt_id, logical_reasoning_score, numerical_ability_score,
-            verbal_ability_score, spatial_reasoning_score, calculated_total_score, max_score,
+            verbal_ability_score, spatial_reasoning_score, listening_task_score, visual_task_score, calculated_total_score, max_score,
             'Completed', answers_json,
             current_section, answered_count, progress_percent
         ))
@@ -5882,6 +5905,26 @@ def get_aptitude_tasks(user_id):
         
         tasks = cursor.fetchall()
         print(f"Found {len(tasks)} aptitude tasks for class {class_level}")
+        
+        # Dynamically inject the correct audio/visual files per class_level without hardcoding extensions
+        import glob
+        import os
+        for task in tasks:
+            current_level = task.get('class_level') or class_level
+            
+            # Handle Listening Audio
+            audio_dir = os.path.join(app.static_folder, 'audio_tasks')
+            if os.path.exists(audio_dir):
+                audio_matches = glob.glob(os.path.join(audio_dir, f'class{current_level}_audio.*'))
+                if audio_matches:
+                    task['listening_audio_url'] = f'/static/audio_tasks/{os.path.basename(audio_matches[0])}'
+            
+            # Handle Visual Image
+            visual_dir = os.path.join(app.static_folder, 'visual_tasks')
+            if os.path.exists(visual_dir):
+                visual_matches = glob.glob(os.path.join(visual_dir, f'class{current_level}_visual.*'))
+                if visual_matches:
+                    task['visual_image_url'] = f'/static/visual_tasks/{os.path.basename(visual_matches[0])}'
         
         cursor.close()
         conn.close()
@@ -8026,7 +8069,7 @@ def get_student_scores(user_id):
             'scores': {
                 'reading_comprehension': {'score': 0, 'max_score': 2, 'attempts': 0, 'latest_score': 0},
                 'mathematical_comprehension': {'score': 0, 'max_score': 3, 'attempts': 0, 'latest_score': 0},
-                'aptitude': {'score': 0, 'max_score': 4, 'attempts': 0, 'latest_score': 0}
+                'aptitude': {'score': 0, 'max_score': 8, 'attempts': 0, 'latest_score': 0}
             },
             'reading_stats': None
         }
