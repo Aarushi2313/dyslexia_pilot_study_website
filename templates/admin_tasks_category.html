@@ -449,6 +449,7 @@ async function editTask(taskId) {
             try { currentLogicalOpt = JSON.parse(currentLogicalOpt); } catch(e) { currentLogicalOpt = []; }
         }
         formFields.appendChild(createArrayField('logical_question_options', 'Options', currentLogicalOpt));
+        formFields.appendChild(createFormField('logical_answer', 'Correct Answer', current.logical_answer));
         
         // Numerical Ability Section
         formFields.appendChild(document.createElement('hr'));
@@ -463,6 +464,7 @@ async function editTask(taskId) {
             try { currentNumericalOpt = JSON.parse(currentNumericalOpt); } catch(e) { currentNumericalOpt = []; }
         }
         formFields.appendChild(createArrayField('numerical_question_options', 'Options', currentNumericalOpt));
+        formFields.appendChild(createFormField('numerical_answer', 'Correct Answer', current.numerical_answer));
         
         // Verbal Ability Section
         formFields.appendChild(document.createElement('hr'));
@@ -477,6 +479,7 @@ async function editTask(taskId) {
             try { currentVerbalOpt = JSON.parse(currentVerbalOpt); } catch(e) { currentVerbalOpt = []; }
         }
         formFields.appendChild(createArrayField('verbal_question_options', 'Options', currentVerbalOpt));
+        formFields.appendChild(createFormField('verbal_answer', 'Correct Answer', current.verbal_answer));
         
         // Spatial Reasoning Section
         formFields.appendChild(document.createElement('hr'));
@@ -491,6 +494,59 @@ async function editTask(taskId) {
             try { currentSpatialOpt = JSON.parse(currentSpatialOpt); } catch(e) { currentSpatialOpt = []; }
         }
         formFields.appendChild(createArrayField('spatial_question_options', 'Options', currentSpatialOpt));
+        formFields.appendChild(createFormField('spatial_answer', 'Correct Answer', current.spatial_answer));
+        
+        // Listening Task Section
+        formFields.appendChild(document.createElement('hr'));
+        const listeningHeader = document.createElement('h4');
+        listeningHeader.textContent = 'Listening Task';
+        listeningHeader.className = 'font-semibold text-lg mt-4';
+        formFields.appendChild(listeningHeader);
+        
+        formFields.appendChild(createFormField('listening_audio_url', 'Audio File Path (e.g. /static/audio.mp3)', current.listening_audio_url));
+        formFields.appendChild(createFormField('listening_q1', 'Question 1', current.listening_q1, 'textarea'));
+        let currentListeningQ1Opt = current.listening_q1_options || [];
+        if (typeof currentListeningQ1Opt === 'string') {
+            try { currentListeningQ1Opt = JSON.parse(currentListeningQ1Opt); } catch(e) { currentListeningQ1Opt = []; }
+        }
+        formFields.appendChild(createArrayField('listening_q1_options', 'Options Q1', currentListeningQ1Opt));
+        formFields.appendChild(createFormField('listening_q1_answer', 'Correct Answer Q1', current.listening_q1_answer));
+        
+        formFields.appendChild(createFormField('listening_q2', 'Question 2', current.listening_q2, 'textarea'));
+        let currentListeningQ2Opt = current.listening_q2_options || [];
+        if (typeof currentListeningQ2Opt === 'string') {
+            try { currentListeningQ2Opt = JSON.parse(currentListeningQ2Opt); } catch(e) { currentListeningQ2Opt = []; }
+        }
+        formFields.appendChild(createArrayField('listening_q2_options', 'Options Q2', currentListeningQ2Opt));
+        formFields.appendChild(createFormField('listening_q2_answer', 'Correct Answer Q2', current.listening_q2_answer));
+        
+        formFields.appendChild(createFormField('listening_q3', 'Subjective Question 3', current.listening_q3, 'textarea'));
+        
+        // Visual Task Section
+        formFields.appendChild(document.createElement('hr'));
+        const visualHeader = document.createElement('h4');
+        visualHeader.textContent = 'Visual Task';
+        visualHeader.className = 'font-semibold text-lg mt-4';
+        formFields.appendChild(visualHeader);
+        
+        formFields.appendChild(createFormField('visual_image_url', 'Image File Path (e.g. /static/image.jpg)', current.visual_image_url));
+        formFields.appendChild(createFormField('visual_q1', 'Question 1', current.visual_q1, 'textarea'));
+        let currentVisualQ1Opt = current.visual_q1_options || [];
+        if (typeof currentVisualQ1Opt === 'string') {
+            try { currentVisualQ1Opt = JSON.parse(currentVisualQ1Opt); } catch(e) { currentVisualQ1Opt = []; }
+        }
+        formFields.appendChild(createArrayField('visual_q1_options', 'Options Q1', currentVisualQ1Opt));
+        formFields.appendChild(createFormField('visual_q1_answer', 'Correct Answer Q1', current.visual_q1_answer));
+        
+        formFields.appendChild(createFormField('visual_q2', 'Question 2', current.visual_q2, 'textarea'));
+        let currentVisualQ2Opt = current.visual_q2_options || [];
+        if (typeof currentVisualQ2Opt === 'string') {
+            try { currentVisualQ2Opt = JSON.parse(currentVisualQ2Opt); } catch(e) { currentVisualQ2Opt = []; }
+        }
+        formFields.appendChild(createArrayField('visual_q2_options', 'Options Q2', currentVisualQ2Opt));
+        formFields.appendChild(createFormField('visual_q2_answer', 'Correct Answer Q2', current.visual_q2_answer));
+        
+        formFields.appendChild(createFormField('visual_q3', 'Subjective Question 3', current.visual_q3, 'textarea'));
     }
     
     // Show the modal
@@ -726,6 +782,7 @@ async function editTask(taskId) {
         
         formFields.appendChild(createFormField('logical_question', 'Question', '', 'textarea'));
         formFields.appendChild(createArrayField('logical_question_options', 'Options', []));
+        formFields.appendChild(createFormField('logical_answer', 'Correct Answer', ''));
         
         // Numerical Ability Section
         formFields.appendChild(document.createElement('hr'));
@@ -736,6 +793,7 @@ async function editTask(taskId) {
         
         formFields.appendChild(createFormField('numerical_question', 'Question', '', 'textarea'));
         formFields.appendChild(createArrayField('numerical_question_options', 'Options', []));
+        formFields.appendChild(createFormField('numerical_answer', 'Correct Answer', ''));
         
         // Verbal Ability Section
         formFields.appendChild(document.createElement('hr'));
@@ -746,6 +804,7 @@ async function editTask(taskId) {
         
         formFields.appendChild(createFormField('verbal_question', 'Question', '', 'textarea'));
         formFields.appendChild(createArrayField('verbal_question_options', 'Options', []));
+        formFields.appendChild(createFormField('verbal_answer', 'Correct Answer', ''));
         
         // Spatial Reasoning Section
         formFields.appendChild(document.createElement('hr'));
@@ -756,6 +815,39 @@ async function editTask(taskId) {
         
         formFields.appendChild(createFormField('spatial_question', 'Question', '', 'textarea'));
         formFields.appendChild(createArrayField('spatial_question_options', 'Options', []));
+        formFields.appendChild(createFormField('spatial_answer', 'Correct Answer', ''));
+        
+        // Listening Task Section
+        formFields.appendChild(document.createElement('hr'));
+        const listeningHeader = document.createElement('h4');
+        listeningHeader.textContent = 'Listening Task';
+        listeningHeader.className = 'font-semibold text-lg mt-4';
+        formFields.appendChild(listeningHeader);
+        
+        formFields.appendChild(createFormField('listening_audio_url', 'Audio File Path (e.g. /static/audio.mp3)', ''));
+        formFields.appendChild(createFormField('listening_q1', 'Question 1', '', 'textarea'));
+        formFields.appendChild(createArrayField('listening_q1_options', 'Options Q1', []));
+        formFields.appendChild(createFormField('listening_q1_answer', 'Correct Answer Q1', ''));
+        formFields.appendChild(createFormField('listening_q2', 'Question 2', '', 'textarea'));
+        formFields.appendChild(createArrayField('listening_q2_options', 'Options Q2', []));
+        formFields.appendChild(createFormField('listening_q2_answer', 'Correct Answer Q2', ''));
+        formFields.appendChild(createFormField('listening_q3', 'Subjective Question 3', '', 'textarea'));
+        
+        // Visual Task Section
+        formFields.appendChild(document.createElement('hr'));
+        const visualHeader = document.createElement('h4');
+        visualHeader.textContent = 'Visual Task';
+        visualHeader.className = 'font-semibold text-lg mt-4';
+        formFields.appendChild(visualHeader);
+        
+        formFields.appendChild(createFormField('visual_image_url', 'Image File Path (e.g. /static/image.jpg)', ''));
+        formFields.appendChild(createFormField('visual_q1', 'Question 1', '', 'textarea'));
+        formFields.appendChild(createArrayField('visual_q1_options', 'Options Q1', []));
+        formFields.appendChild(createFormField('visual_q1_answer', 'Correct Answer Q1', ''));
+        formFields.appendChild(createFormField('visual_q2', 'Question 2', '', 'textarea'));
+        formFields.appendChild(createArrayField('visual_q2_options', 'Options Q2', []));
+        formFields.appendChild(createFormField('visual_q2_answer', 'Correct Answer Q2', ''));
+        formFields.appendChild(createFormField('visual_q3', 'Subjective Question 3', '', 'textarea'));
     }
     
     // Set task ID to empty for new task

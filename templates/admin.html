@@ -693,11 +693,22 @@
                                     <p class="text-xs sm:text-sm text-gray-500">Review and manage all core study tasks.
                                     </p>
                                 </div>
-                                <button onclick="addNewTask()"
-                                    class="hidden md:inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-500">
-                                    <span class="text-lg leading-none">＋</span>
-                                    <span>Add Task</span>
-                                </button>
+                                <div class="flex items-center gap-2">
+                                    <a href="{{ url_for('admin_export_tasks_csv') }}"
+                                        class="hidden md:inline-flex items-center gap-2 bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-emerald-500">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4">
+                                            </path>
+                                        </svg>
+                                        <span>Export All Tasks</span>
+                                    </a>
+                                    <button onclick="addNewTask()"
+                                        class="hidden md:inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-500">
+                                        <span class="text-lg leading-none">＋</span>
+                                        <span>Add Task</span>
+                                    </button>
+                                </div>
                             </div>
 
                             <!-- Categories Grid -->
