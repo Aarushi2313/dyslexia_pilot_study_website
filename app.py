@@ -953,6 +953,15 @@ def switch_back_to_parent():
         print(f"Switch back to parent error: {e}")
         return jsonify({'success': False, 'message': 'Internal server error'}), 500
 
+@app.route('/api/check-parent-session', methods=['GET'])
+def check_parent_session():
+    """Check whether a stored parent session exists in the server-side session.
+    Used by parent.html to validate the sessionStorage 'viewing_as_child' flag
+    after a full logout/re-login cycle that would have wiped the server session.
+    """
+    has_parent = 'parent_user_id' in session
+    return jsonify({'has_parent_session': has_parent})
+
 @app.route('/api/unified-login', methods=['POST'])
 def unified_login():
     """Unified API endpoint to handle login for all user types (school, parent, child)."""
@@ -1008,6 +1017,15 @@ def unified_login():
                 session['user_id'] = user_id
                 session['email'] = email
                 session['user_type'] = user_type
+                
+                # If this is a parent logging in, also persist parent session keys.
+                # This ensures that /api/switch-back-to-parent still works even if
+                # the user previously logged in as a child (which wipes the server
+                # session on logout) and then logs back in as a parent.
+                if user_type == 'parent':
+                    session['parent_user_id'] = user_id
+                    session['parent_email'] = email
+                    session['parent_user_type'] = 'parent'
                 
                 return jsonify({
                     'success': True,

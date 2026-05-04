@@ -549,10 +549,13 @@
                     .then(res => res.json())
                     .then(data => {
                         localStorage.clear();
+                        // Clear the child-viewing flag so re-login as parent starts clean
+                        sessionStorage.removeItem('viewing_as_child');
                         window.location.href = '/';
                     })
                     .catch(() => {
                         localStorage.clear();
+                        sessionStorage.removeItem('viewing_as_child');
                         window.location.href = '/';
                     });
             });
@@ -570,10 +573,13 @@
                     .then(res => res.json())
                     .then(data => {
                         localStorage.clear();
+                        // Clear the child-viewing flag so re-login as parent starts clean
+                        sessionStorage.removeItem('viewing_as_child');
                         window.location.href = '/';
                     })
                     .catch(() => {
                         localStorage.clear();
+                        sessionStorage.removeItem('viewing_as_child');
                         window.location.href = '/';
                     });
             });
@@ -591,9 +597,26 @@
 
         // Load children on page load
         document.addEventListener('DOMContentLoaded', function () {
-            // Check if we're viewing as a child (have parent session stored)
+            // Check if we're viewing as a child (have parent session stored).
+            // We also verify with the server that parent_user_id is still in the
+            // session; if not (e.g. after a full logout+re-login), clear the
+            // stale flag and show the normal parent dashboard instead.
             if (sessionStorage.getItem('viewing_as_child') === 'true') {
-                showBackToParentButton();
+                fetch('/api/check-parent-session', { method: 'GET', credentials: 'same-origin' })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.has_parent_session) {
+                            showBackToParentButton();
+                        } else {
+                            // Stale flag — parent did a full logout and re-logged in
+                            sessionStorage.removeItem('viewing_as_child');
+                            loadChildren();
+                        }
+                    })
+                    .catch(() => {
+                        sessionStorage.removeItem('viewing_as_child');
+                        loadChildren();
+                    });
             } else {
                 loadChildren();
             }
