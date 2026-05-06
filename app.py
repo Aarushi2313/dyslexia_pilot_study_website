@@ -257,7 +257,7 @@ def calculate_reading_accuracy(ground_truth, transcribed_text):
 # Ensure suggested_tasks table exists after DB connector is defined
 ensure_suggested_tasks_table()
 
-UPLOAD_FOLDER = '/mnt/LS226/aditya_dyslexia_data/uploads'
+UPLOAD_FOLDER = 'uploads'
 ALLOWED_EXTENSIONS = {'wav', 'webm', 'mp3', 'ogg', 'm4a', 'jpg', 'jpeg', 'png', 'gif', 'bmp', 'tiff', 'webp'}
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
