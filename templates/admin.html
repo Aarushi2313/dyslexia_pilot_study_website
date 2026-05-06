@@ -739,6 +739,16 @@
                                     <h3 class="text-lg font-semibold text-gray-800">Aptitude Test</h3>
                                     <p class="text-sm text-gray-600 mt-1">View and edit aptitude task</p>
                                 </a>
+                                <a href="{{ url_for('admin_tasks_by_category', category_slug='listening') }}"
+                                    class="block bg-white p-4 sm:p-5 md:p-6 rounded-lg shadow-md hover:shadow-lg border border-gray-200 transition">
+                                    <h3 class="text-lg font-semibold text-gray-800">Listening Task</h3>
+                                    <p class="text-sm text-gray-600 mt-1">View and edit class-wise listening tasks</p>
+                                </a>
+                                <a href="{{ url_for('admin_tasks_by_category', category_slug='visual') }}"
+                                    class="block bg-white p-4 sm:p-5 md:p-6 rounded-lg shadow-md hover:shadow-lg border border-gray-200 transition">
+                                    <h3 class="text-lg font-semibold text-gray-800">Visual Task</h3>
+                                    <p class="text-sm text-gray-600 mt-1">View and edit class-wise visual tasks</p>
+                                </a>
                             </div>
                         </div>
                         <!-- School Suggestions Tab -->
@@ -1231,7 +1241,8 @@
                             'rgba(245, 158, 11, 0.8)',
                             'rgba(139, 92, 246, 0.8)',
                             'rgba(239, 68, 68, 0.8)',
-                            'rgba(20, 184, 166, 0.8)'
+                            'rgba(20, 184, 166, 0.8)',
+                            'rgba(249, 115, 22, 0.8)'
                         ],
                         borderColor: [
                             'rgba(59, 130, 246, 1)',
@@ -1239,7 +1250,8 @@
                             'rgba(245, 158, 11, 1)',
                             'rgba(139, 92, 246, 1)',
                             'rgba(239, 68, 68, 1)',
-                            'rgba(20, 184, 166, 1)'
+                            'rgba(20, 184, 166, 1)',
+                            'rgba(249, 115, 22, 1)'
                         ],
                         borderWidth: 1
                     }]

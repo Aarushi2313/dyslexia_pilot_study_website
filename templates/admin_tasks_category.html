@@ -172,6 +172,35 @@
                                                             {% endfor %}
                                                         </ul>
                                                     {% endif %}
+                                                {% elif category_slug in ['listening', 'visual'] %}
+                                                    <div class="text-xs text-gray-500 mb-1">Instructions:</div>
+                                                    <div class="text-sm text-gray-700 mb-2">{{ task.instructions }}</div>
+                                                    <div class="text-xs text-gray-500 mb-1">{{ 'Audio' if category_slug == 'listening' else 'Image' }}:</div>
+                                                    <div class="text-sm text-gray-700 mb-2 break-all">{{ task.audio_url or task.image_url }}</div>
+                                                    <div class="text-xs text-gray-500 mb-1">Questions:</div>
+                                                    <ol class="list-decimal list-inside text-sm text-gray-700 space-y-1">
+                                                        <li>{{ task.question1 }}</li>
+                                                        <li>{{ task.question2 }}</li>
+                                                        <li>{{ task.question3 }}</li>
+                                                    </ol>
+                                                    {% if task.answer1_options %}
+                                                        <div class="mt-2 text-xs text-gray-500">Options for Q1:</div>
+                                                        <ul class="list-disc list-inside text-sm text-gray-700">
+                                                            {% for opt in task.answer1_options %}
+                                                                <li>{{ opt }}</li>
+                                                            {% endfor %}
+                                                        </ul>
+                                                    {% endif %}
+                                                    {% if task.answer2_options %}
+                                                        <div class="mt-2 text-xs text-gray-500">Options for Q2:</div>
+                                                        <ul class="list-disc list-inside text-sm text-gray-700">
+                                                            {% for opt in task.answer2_options %}
+                                                                <li>{{ opt }}</li>
+                                                            {% endfor %}
+                                                        </ul>
+                                                    {% endif %}
+                                                    <div class="mt-2 text-xs text-gray-500">Answer 3 type:</div>
+                                                    <div class="text-sm text-gray-700">{{ task.answer3_type }}</div>
                                                 {% endif %}
                                             </td>
                                             <td class="align-top px-6 py-4 text-sm text-gray-900">{{ task.estimated_time }}</td>
@@ -547,6 +576,29 @@ async function editTask(taskId) {
         formFields.appendChild(createFormField('visual_q2_answer', 'Correct Answer Q2', current.visual_q2_answer));
         
         formFields.appendChild(createFormField('visual_q3', 'Subjective Question 3', current.visual_q3, 'textarea'));
+    } else if (category === 'listening' || category === 'visual') {
+        formFields.appendChild(createFormField('task_name', 'Task Name', current.task_name || ''));
+        formFields.appendChild(createFormField('class_level', 'Class Level (1-12)', current.class_level, 'number'));
+        formFields.appendChild(createFormField('difficulty_level', 'Difficulty Level', current.difficulty_level, 'select', ['Easy', 'Medium', 'Hard']));
+        formFields.appendChild(createFormField('instructions', 'Instructions', current.instructions, 'textarea'));
+        formFields.appendChild(createFormField(category === 'listening' ? 'audio_url' : 'image_url', category === 'listening' ? 'Audio File Path' : 'Image File Path', category === 'listening' ? current.audio_url : current.image_url));
+        formFields.appendChild(createFormField('question1', 'Question 1', current.question1, 'textarea'));
+        let currentOpt1 = current.answer1_options || [];
+        let currentOpt2 = current.answer2_options || [];
+        if (typeof currentOpt1 === 'string') {
+            try { currentOpt1 = JSON.parse(currentOpt1); } catch(e) { currentOpt1 = []; }
+        }
+        if (typeof currentOpt2 === 'string') {
+            try { currentOpt2 = JSON.parse(currentOpt2); } catch(e) { currentOpt2 = []; }
+        }
+        formFields.appendChild(createArrayField('answer1_options', 'Options for Question 1', currentOpt1));
+        formFields.appendChild(createFormField('answer1', 'Correct Answer 1', current.answer1));
+        formFields.appendChild(createFormField('question2', 'Question 2', current.question2, 'textarea'));
+        formFields.appendChild(createArrayField('answer2_options', 'Options for Question 2', currentOpt2));
+        formFields.appendChild(createFormField('answer2', 'Correct Answer 2', current.answer2));
+        formFields.appendChild(createFormField('question3', 'Question 3', current.question3, 'textarea'));
+        formFields.appendChild(createFormField('answer3_type', 'Answer 3 Type', current.answer3_type, 'select', ['text', 'multiple_choice']));
+        formFields.appendChild(createFormField('estimated_time', 'Estimated Time (min)', current.estimated_time, 'number'));
     }
     
     // Show the modal
@@ -848,6 +900,18 @@ async function editTask(taskId) {
         formFields.appendChild(createArrayField('visual_q2_options', 'Options Q2', []));
         formFields.appendChild(createFormField('visual_q2_answer', 'Correct Answer Q2', ''));
         formFields.appendChild(createFormField('visual_q3', 'Subjective Question 3', '', 'textarea'));
+    } else if (category === 'listening' || category === 'visual') {
+        formFields.appendChild(createFormField('instructions', 'Instructions', '', 'textarea'));
+        formFields.appendChild(createFormField(category === 'listening' ? 'audio_url' : 'image_url', category === 'listening' ? 'Audio File Path' : 'Image File Path', ''));
+        formFields.appendChild(createFormField('question1', 'Question 1', '', 'textarea'));
+        formFields.appendChild(createArrayField('answer1_options', 'Options for Question 1', []));
+        formFields.appendChild(createFormField('answer1', 'Correct Answer 1', ''));
+        formFields.appendChild(createFormField('question2', 'Question 2', '', 'textarea'));
+        formFields.appendChild(createArrayField('answer2_options', 'Options for Question 2', []));
+        formFields.appendChild(createFormField('answer2', 'Correct Answer 2', ''));
+        formFields.appendChild(createFormField('question3', 'Question 3', '', 'textarea'));
+        formFields.appendChild(createFormField('answer3_type', 'Answer 3 Type', 'text', 'select', ['text', 'multiple_choice']));
+        formFields.appendChild(createFormField('estimated_time', 'Estimated Time (min)', '', 'number'));
     }
     
     // Set task ID to empty for new task
@@ -1003,5 +1067,4 @@ async function editTask(taskId) {
     </script>
 </body>
 </html>
-
 
