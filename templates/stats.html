@@ -166,9 +166,26 @@
                     <div class="bg-blue-600 h-5 sm:h-6 rounded-full transition-all duration-1000 ease-in-out"
                         id="progressBar" style="width: 0%"></div>
                 </div>
-                <div class="text-xs sm:text-sm text-gray-500" id="progressText">0 of 8 tasks completed</div>
+                <div class="text-xs sm:text-sm text-gray-500" id="progressText">0 tasks completed</div>
             </div>
         </div>
+        <!-- Motivational Statement -->
+        <div id="motivationalStatement"
+            class="bg-yellow-100 rounded-lg sm:rounded-xl shadow p-4 sm:p-5 md:p-6 flex flex-col items-center animate-fade-in">
+            <span class="text-lg sm:text-xl md:text-2xl font-bold text-yellow-800 mb-2" id="motivationTitle">"You're
+                doing great!"</span>
+            <p class="text-sm sm:text-base md:text-lg text-gray-700 text-center" id="motivationMessage">Loading your
+                personalized message...</p>
+        </div>
+        <!-- Badges Section (Top for motivation) -->
+        <div class="bg-white rounded-lg sm:rounded-xl shadow p-4 sm:p-5 md:p-6 mb-4 sm:mb-6 md:mb-8 animate-fade-in">
+            <h3 class="text-xl sm:text-2xl font-bold mb-4 sm:mb-6 text-yellow-900 text-center">Badges Earned</h3>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4" id="badgesContainer">
+                <!-- Badges will be loaded dynamically -->
+            </div>
+        </div>
+
+
 
         <!-- Task Scores Section -->
         <div class="bg-white rounded-lg sm:rounded-xl shadow p-4 sm:p-5 md:p-6 mb-4 sm:mb-6 md:mb-8 animate-fade-in">
@@ -194,21 +211,11 @@
             id="readingAnalysisSection" style="display: none;">
             <h3 class="text-xl sm:text-2xl font-bold mb-4 sm:mb-6 text-teal-900 text-center">Reading Analysis</h3>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <!-- WPM Gauge -->
-                <div class="flex flex-col items-center">
+                <!-- Reading Speed -->
+                <div class="flex flex-col items-center justify-center">
                     <h4 class="text-lg font-semibold text-teal-800 mb-2">Reading Speed</h4>
-                    <div class="relative w-32 h-32 flex items-center justify-center">
-                        <svg class="w-full h-full" viewBox="0 0 36 36">
-                            <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                                fill="none" stroke="#e5e7eb" stroke-width="4" />
-                            <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831" fill="none" stroke="#0d9488"
-                                stroke-width="4" stroke-dasharray="0, 100" id="wpmCircle" />
-                        </svg>
-                        <div class="absolute flex flex-col items-center">
-                            <span class="text-2xl font-bold text-teal-700" id="wpmValue">0</span>
-                            <span class="text-xs text-teal-600">WPM</span>
-                        </div>
-                    </div>
+                    <div class="text-4xl font-bold text-teal-600 mb-1" id="wpmValue">0</div>
+                    <div class="text-sm text-gray-500 text-center">words per minute</div>
                 </div>
 
                 <!-- Pause Frequency -->
@@ -216,9 +223,6 @@
                     <h4 class="text-lg font-semibold text-teal-800 mb-2">Pauses per Minute</h4>
                     <div class="text-4xl font-bold text-teal-600 mb-1" id="pauseFreqValue">0</div>
                     <div class="text-sm text-gray-500 text-center">pauses/min</div>
-                    <div class="mt-2 w-full bg-gray-200 rounded-full h-2.5">
-                        <div class="bg-teal-500 h-2.5 rounded-full" id="pauseBar" style="width: 0%"></div>
-                    </div>
                 </div>
 
                 <!-- Smoothness -->
@@ -249,7 +253,7 @@
                         <svg class="w-full h-full" viewBox="0 0 36 36">
                             <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
                                 fill="none" stroke="#e5e7eb" stroke-width="4" />
-                            <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831" fill="none" stroke="#4f46e5"
+                            <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#4f46e5"
                                 stroke-width="4" stroke-dasharray="0, 100" id="spellingCircle" />
                         </svg>
                         <div class="absolute flex flex-col items-center">
@@ -311,23 +315,6 @@
             </div>
         </div>
 
-        <!-- Badges Section -->
-        <div class="bg-white rounded-lg sm:rounded-xl shadow p-4 sm:p-5 md:p-6 mb-4 sm:mb-6 md:mb-8 animate-fade-in">
-            <h3 class="text-xl sm:text-2xl font-bold mb-4 sm:mb-6 text-yellow-900 text-center">Badges Earned</h3>
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4" id="badgesContainer">
-                <!-- Badges will be loaded dynamically -->
-            </div>
-        </div>
-
-
-        <!-- Motivational Statement -->
-        <div id="motivationalStatement"
-            class="bg-yellow-100 rounded-lg sm:rounded-xl shadow p-4 sm:p-5 md:p-6 flex flex-col items-center animate-fade-in">
-            <span class="text-lg sm:text-xl md:text-2xl font-bold text-yellow-800 mb-2" id="motivationTitle">"You're
-                doing great!"</span>
-            <p class="text-sm sm:text-base md:text-lg text-gray-700 text-center" id="motivationMessage">Loading your
-                personalized message...</p>
-        </div>
     </main>
 
 
@@ -693,8 +680,12 @@
             const section = document.getElementById('typingAnalysisSection');
             if (section) section.style.display = 'block';
 
+            const spellingErrorRate = Number(stats.spelling_error_rate ?? 0);
+            const sentenceLengthVariance = Number(stats.sentence_length_variance ?? 0);
+            const editDensity = Number(stats.edit_density ?? 0);
+
             // Spelling Accuracy
-            const accuracy = Math.max(0, 100 - stats.spelling_error_rate).toFixed(1);
+            const accuracy = Math.max(0, 100 - spellingErrorRate).toFixed(1);
             const spellingValue = document.getElementById('spellingValue');
             const spellingCircle = document.getElementById('spellingCircle');
             if (spellingValue) spellingValue.innerText = `${accuracy}%`;
@@ -702,11 +693,11 @@
 
             // Sentence Variance
             const sentenceVarValue = document.getElementById('sentenceVarValue');
-            if (sentenceVarValue) sentenceVarValue.innerText = stats.sentence_length_variance.toFixed(1);
+            if (sentenceVarValue) sentenceVarValue.innerText = sentenceLengthVariance.toFixed(1);
 
             // Edit Density
             const editDensityValue = document.getElementById('editDensityValue');
-            if (editDensityValue) editDensityValue.innerText = stats.edit_density.toFixed(3);
+            if (editDensityValue) editDensityValue.innerText = editDensity.toFixed(3);
 
             // Attempt Number
             const attemptNum = document.getElementById('typingAttemptNum');
@@ -719,25 +710,18 @@
 
             // 1. WPM
             const wpmValue = document.getElementById('wpmValue');
-            const wpmCircle = document.getElementById('wpmCircle');
-            if (wpmValue) wpmValue.innerText = stats.wpm;
-
-            // Map WPM to percentage (assuming max 200 wpm for full circle for kids)
-            const wpmPercent = Math.min((stats.wpm / 200) * 100, 100);
-            if (wpmCircle) wpmCircle.setAttribute('stroke-dasharray', `${wpmPercent}, 100`);
+            if (wpmValue) wpmValue.innerText = Number(stats.wpm ?? 0).toFixed(2);
 
             // 2. Pause Frequency
             const pauseFreqVal = document.getElementById('pauseFreqValue');
-            const pauseBar = document.getElementById('pauseBar');
-            if (pauseFreqVal) pauseFreqVal.innerText = stats.pause_frequency;
-            const pausePercent = Math.min((stats.pause_frequency / 20) * 100, 100);
-            if (pauseBar) pauseBar.style.width = `${pausePercent}%`;
+            if (pauseFreqVal) pauseFreqVal.innerText = Number(stats.pause_frequency ?? 0).toFixed(2);
 
             // 3. Smoothness
             const smoothnessVal = document.getElementById('smoothnessValue');
             const smoothnessBar = document.getElementById('smoothnessBar');
-            if (smoothnessVal) smoothnessVal.innerText = `${stats.smoothness}%`;
-            if (smoothnessBar) smoothnessBar.style.width = `${stats.smoothness}%`;
+            const smoothness = Math.max(0, Math.min(100, Number(stats.smoothness ?? 0)));
+            if (smoothnessVal) smoothnessVal.innerText = `${smoothness.toFixed(2)}%`;
+            if (smoothnessBar) smoothnessBar.style.width = `${smoothness}%`;
 
             // 4. NEW: Accuracy & Errors (Inject HTML purely via JS for now or use existing slots if I had them. 
             // The HTML structure in stats.html assumes 3 columns. I should probably append a new row or modify the grid.)
@@ -760,17 +744,17 @@
             accuracyContainer.innerHTML = `
                 <div class="flex flex-col items-center justify-center">
                     <h4 class="text-lg font-semibold text-teal-800 mb-2">Accuracy</h4>
-                    <div class="text-4xl font-bold text-teal-600 mb-1">${stats.accuracy}%</div>
+                    <div class="text-4xl font-bold text-teal-600 mb-1">${Number(stats.accuracy ?? 0).toFixed(2)}%</div>
                     <div class="text-sm text-gray-500 text-center">correct words</div>
                 </div>
                 <div class="flex flex-col items-center justify-center">
                     <h4 class="text-lg font-semibold text-orange-800 mb-2">Mispronounced</h4>
-                    <div class="text-4xl font-bold text-orange-600 mb-1">${stats.mispronounced_words}</div>
+                    <div class="text-4xl font-bold text-orange-600 mb-1">${Number(stats.mispronounced_words ?? 0)}</div>
                     <div class="text-sm text-gray-500 text-center">words needs practice</div>
                 </div>
                 <div class="flex flex-col items-center justify-center">
                     <h4 class="text-lg font-semibold text-red-800 mb-2">Skipped</h4>
-                    <div class="text-4xl font-bold text-red-600 mb-1">${stats.skipped_words}</div>
+                    <div class="text-4xl font-bold text-red-600 mb-1">${Number(stats.skipped_words ?? 0)}</div>
                     <div class="text-sm text-gray-500 text-center">words missed</div>
                 </div>
             `;
@@ -778,8 +762,8 @@
             // Meta info
             const totalWords = document.getElementById('totalWords');
             const audioDuration = document.getElementById('audioDuration');
-            if (totalWords) totalWords.innerText = stats.total_words;
-            if (audioDuration) audioDuration.innerText = stats.audio_duration;
+            if (totalWords) totalWords.innerText = Number(stats.total_words ?? 0);
+            if (audioDuration) audioDuration.innerText = Number(stats.audio_duration ?? 0);
         }
 
         function displayProgress(progress) {
@@ -1057,52 +1041,9 @@
             });
         }
 
-        // Animate progress bar
+        // Load stats when page loads
         document.addEventListener('DOMContentLoaded', function () {
-            //const percent = 82; // Example: 82% tasks completed
-            const bar = document.getElementById('progressBar');
-            const text = document.getElementById('progressText');
-            setTimeout(() => {
-                bar.style.width = percent + '%';
-                text.textContent = percent + '% of tasks completed';
-            }, 300);
-
-            // Load scores when page loads
             loadStudentScores();
-        });
-
-        // Chart.js line graph for progress
-        document.addEventListener('DOMContentLoaded', function () {
-            const ctx = document.getElementById('progressChart').getContext('2d');
-            new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Today'],
-                    datasets: [{
-                        label: 'Tasks Completed',
-                        data: [2, 3, 4, 4, 5, 6, 7],
-                        borderColor: '#2563eb',
-                        backgroundColor: 'rgba(37,99,235,0.1)',
-                        tension: 0.4,
-                        fill: true,
-                        pointRadius: 5,
-                        pointBackgroundColor: '#2563eb'
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    plugins: {
-                        legend: { display: false }
-                    },
-                    scales: {
-                        y: { beginAtZero: true, ticks: { stepSize: 1 } }
-                    },
-                    animation: {
-                        duration: 1200,
-                        easing: 'easeOutBounce'
-                    }
-                }
-            });
         });
 
         // Simple fade-in animation

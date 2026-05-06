@@ -1400,27 +1400,33 @@
                     return;
                 }
                 // Checkbox validation
-                if (!document.querySelector('input[name="terms"]').checked || !document.querySelector('input[name="consent"]').checked) {
+                if (!modalParentSignupForm.querySelector('input[name="terms"]').checked || !modalParentSignupForm.querySelector('input[name="consent"]').checked) {
                     errorDiv.textContent = 'You must agree to the terms and consent.';
                     errorDiv.classList.remove('hidden');
                     return;
                 }
                 data.terms = 'on';
                 data.consent = 'on';
+                data.email = (data.email || '').trim().toLowerCase();
 
                 errorDiv.classList.add('hidden');
                 submitBtn.disabled = true;
-                submitBtn.textContent = 'Creating Account...';
+                submitBtn.textContent = 'Sending verification code...';
 
-                fetch('/api/parent/register', {
+                fetch('/api/send-otp', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data)
+                    body: JSON.stringify({ email: data.email, user_type: 'parent' })
                 })
                     .then(res => res.json())
                     .then(resp => {
                         if (resp.success) {
-                            window.location.href = '/parent';
+                            sessionStorage.setItem('pendingRegistration', JSON.stringify({
+                                name: data.name,
+                                email: data.email,
+                                password: data.password
+                            }));
+                            window.location.href = `/verify-otp?user_type=parent&email=${encodeURIComponent(data.email)}`;
                         } else {
                             errorDiv.textContent = resp.message || 'Registration failed';
                             errorDiv.classList.remove('hidden');
@@ -1466,20 +1472,28 @@
                 }
                 data.terms = 'on';
                 data.consent = 'on';
+                data.email = (data.email || '').trim().toLowerCase();
 
                 errorDiv.classList.add('hidden');
                 submitBtn.disabled = true;
-                submitBtn.textContent = 'Creating Account...';
+                submitBtn.textContent = 'Sending verification code...';
 
-                fetch('/api/school/register', {
+                fetch('/api/send-otp', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data)
+                    body: JSON.stringify({ email: data.email, user_type: 'school' })
                 })
                     .then(res => res.json())
                     .then(resp => {
                         if (resp.success) {
-                            window.location.href = '/school.html';
+                            sessionStorage.setItem('pendingRegistration', JSON.stringify({
+                                name: data.name,
+                                email: data.email,
+                                password: data.password,
+                                address: (data.address || '').trim(),
+                                phone: (data.phone || '').trim()
+                            }));
+                            window.location.href = `/verify-otp?user_type=school&email=${encodeURIComponent(data.email)}`;
                         } else {
                             errorDiv.textContent = resp.message || 'Registration failed';
                             errorDiv.classList.remove('hidden');
