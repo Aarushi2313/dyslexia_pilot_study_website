@@ -783,7 +783,7 @@ ensure_listening_tasks_table()
 ensure_visual_progress_table()
 ensure_visual_tasks_table()
 
-UPLOAD_FOLDER = '/mnt/LS226/aditya_dyslexia_data/uploads'
+UPLOAD_FOLDER = 'uploads'
 ALLOWED_EXTENSIONS = {'wav', 'webm', 'mp3', 'ogg', 'm4a', 'jpg', 'jpeg', 'png', 'gif', 'bmp', 'tiff', 'webp'}
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
