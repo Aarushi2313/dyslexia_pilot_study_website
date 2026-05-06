@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Verify Your Email – Dyslexia Research Study</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { font-family: 'Inter', sans-serif; box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #0f0c29, #1a237e, #283593);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 16px;
+    }
+
+    .card {
+      background: rgba(255,255,255,0.05);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 24px;
+      padding: 48px 40px;
+      width: 100%;
+      max-width: 460px;
+      box-shadow: 0 32px 64px rgba(0,0,0,0.4);
+      text-align: center;
+      animation: slideUp 0.5s ease;
+    }
+
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(30px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .shield-icon {
+      width: 72px;
+      height: 72px;
+      background: linear-gradient(135deg, #3949AB, #5C6BC0);
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 24px;
+      font-size: 34px;
+      box-shadow: 0 8px 24px rgba(57,73,171,0.5);
+    }
+
+    h1 {
+      color: #fff;
+      font-size: 26px;
+      font-weight: 800;
+      margin: 0 0 8px;
+    }
+
+    .subtitle {
+      color: rgba(255,255,255,0.6);
+      font-size: 14px;
+      margin: 0 0 32px;
+      line-height: 1.6;
+    }
+
+    .email-badge {
+      display: inline-block;
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 100px;
+      padding: 6px 16px;
+      color: #90CAF9;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 32px;
+      word-break: break-all;
+    }
+
+    /* 6 digit OTP input boxes */
+    .otp-inputs {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      margin-bottom: 28px;
+    }
+
+    .otp-box {
+      width: 52px;
+      height: 60px;
+      background: rgba(255,255,255,0.07);
+      border: 2px solid rgba(255,255,255,0.15);
+      border-radius: 12px;
+      color: #fff;
+      font-size: 26px;
+      font-weight: 700;
+      text-align: center;
+      outline: none;
+      transition: border-color 0.2s, background 0.2s, transform 0.15s;
+      caret-color: #90CAF9;
+    }
+
+    .otp-box:focus {
+      border-color: #5C6BC0;
+      background: rgba(92,107,192,0.15);
+      transform: scale(1.06);
+    }
+
+    .otp-box.filled {
+      border-color: #42A5F5;
+    }
+
+    .otp-box.error-shake {
+      border-color: #EF5350;
+      animation: shake 0.4s ease;
+    }
+
+    @keyframes shake {
+      0%,100% { transform: translateX(0); }
+      20%      { transform: translateX(-6px); }
+      40%      { transform: translateX(6px); }
+      60%      { transform: translateX(-4px); }
+      80%      { transform: translateX(4px); }
+    }
+
+    .btn-verify {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, #1565C0, #3949AB);
+      color: #fff;
+      font-size: 15px;
+      font-weight: 700;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      letter-spacing: 0.5px;
+      transition: opacity 0.2s, transform 0.15s, box-shadow 0.2s;
+      box-shadow: 0 6px 20px rgba(21,101,192,0.4);
+    }
+
+    .btn-verify:hover:not(:disabled) {
+      opacity: 0.92;
+      transform: translateY(-1px);
+      box-shadow: 0 10px 28px rgba(21,101,192,0.5);
+    }
+
+    .btn-verify:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* Timer + resend */
+    .timer-row {
+      margin-top: 22px;
+      font-size: 13px;
+      color: rgba(255,255,255,0.5);
+    }
+
+    .resend-btn {
+      background: none;
+      border: none;
+      color: #90CAF9;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      padding: 0;
+      text-decoration: underline;
+      transition: color 0.2s;
+    }
+
+    .resend-btn:hover { color: #42A5F5; }
+    .resend-btn:disabled { color: rgba(255,255,255,0.3); cursor: not-allowed; text-decoration: none; }
+
+    /* Status messages */
+    .msg {
+      border-radius: 10px;
+      padding: 12px 16px;
+      font-size: 13px;
+      font-weight: 500;
+      margin-bottom: 20px;
+      display: none;
+      text-align: left;
+    }
+
+    .msg.success { background: rgba(56,142,60,0.25); border: 1px solid rgba(56,142,60,0.5); color: #A5D6A7; }
+    .msg.error   { background: rgba(198,40,40,0.25); border: 1px solid rgba(198,40,40,0.5); color: #EF9A9A; }
+
+    .back-link {
+      display: inline-block;
+      margin-top: 24px;
+      color: rgba(255,255,255,0.4);
+      font-size: 13px;
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    .back-link:hover { color: rgba(255,255,255,0.7); }
+
+    .step-dots {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 36px;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.2);
+    }
+
+    .dot.active { background: #5C6BC0; }
+    .dot.done   { background: #42A5F5; }
+
+    @media (max-width: 480px) {
+      .card { padding: 36px 24px; }
+      .otp-box { width: 44px; height: 54px; font-size: 22px; }
+      h1 { font-size: 22px; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+
+    <!-- Step indicator -->
+    <div class="step-dots">
+      <div class="dot done"></div>
+      <div class="dot active"></div>
+      <div class="dot"></div>
+    </div>
+
+    <div class="shield-icon">🛡️</div>
+    <h1>Verify Your Email</h1>
+    <p class="subtitle">We sent a 6-digit code to</p>
+    <div class="email-badge" id="emailBadge">—</div>
+
+    <!-- Status messages -->
+    <div class="msg" id="successMsg"></div>
+    <div class="msg" id="errorMsg"></div>
+
+    <!-- OTP boxes -->
+    <form id="otpForm" autocomplete="off">
+      <div class="otp-inputs" id="otpInputs">
+        <input class="otp-box" type="text" inputmode="numeric" maxlength="1" data-index="0" id="otp0" aria-label="OTP digit 1">
+        <input class="otp-box" type="text" inputmode="numeric" maxlength="1" data-index="1" id="otp1" aria-label="OTP digit 2">
+        <input class="otp-box" type="text" inputmode="numeric" maxlength="1" data-index="2" id="otp2" aria-label="OTP digit 3">
+        <input class="otp-box" type="text" inputmode="numeric" maxlength="1" data-index="3" id="otp3" aria-label="OTP digit 4">
+        <input class="otp-box" type="text" inputmode="numeric" maxlength="1" data-index="4" id="otp4" aria-label="OTP digit 5">
+        <input class="otp-box" type="text" inputmode="numeric" maxlength="1" data-index="5" id="otp5" aria-label="OTP digit 6">
+      </div>
+
+      <button type="submit" class="btn-verify" id="verifyBtn" disabled>
+        Verify &amp; Continue
+      </button>
+    </form>
+
+    <!-- Timer + resend -->
+    <div class="timer-row">
+      <span id="timerLabel">Code expires in <strong id="timerDisplay">5:00</strong></span>
+      <span id="resendRow" style="display:none;">
+        Didn't receive it?
+        <button class="resend-btn" id="resendBtn" onclick="resendOTP()">Resend Code</button>
+      </span>
+    </div>
+
+    <a href="#" class="back-link" id="backLink">← Back to Registration</a>
+  </div>
+
+<script>
+  // ─── Read URL params ────────────────────────────────────────────────────────
+  const params   = new URLSearchParams(window.location.search);
+  const EMAIL    = (params.get('email') || '').toLowerCase().trim();
+  const UTYPE    = (params.get('user_type') || 'parent').toLowerCase().trim();
+  const EXPIRY   = 300; // seconds, matches server default
+
+  // Update UI with email
+  document.getElementById('emailBadge').textContent = EMAIL || '(unknown)';
+
+  // Back link
+  document.getElementById('backLink').href =
+    UTYPE === 'school' ? '/school-signup' : '/parent-signup';
+
+  // ─── OTP digit boxes ────────────────────────────────────────────────────────
+  const boxes      = Array.from(document.querySelectorAll('.otp-box'));
+  const verifyBtn  = document.getElementById('verifyBtn');
+
+  function getOTPValue() {
+    return boxes.map(b => b.value).join('');
+  }
+
+  function updateVerifyBtn() {
+    const val = getOTPValue();
+    verifyBtn.disabled = val.length !== 6;
+  }
+
+  boxes.forEach((box, idx) => {
+    box.addEventListener('input', (e) => {
+      const v = e.target.value.replace(/\D/g, '');
+      box.value = v ? v[0] : '';
+      box.classList.toggle('filled', box.value !== '');
+      if (box.value && idx < 5) boxes[idx + 1].focus();
+      updateVerifyBtn();
+    });
+
+    box.addEventListener('keydown', (e) => {
+      if (e.key === 'Backspace') {
+        if (!box.value && idx > 0) {
+          boxes[idx - 1].value = '';
+          boxes[idx - 1].classList.remove('filled');
+          boxes[idx - 1].focus();
+        }
+        box.classList.remove('filled');
+        updateVerifyBtn();
+      }
+      if (e.key === 'ArrowLeft' && idx > 0)  boxes[idx - 1].focus();
+      if (e.key === 'ArrowRight' && idx < 5) boxes[idx + 1].focus();
+    });
+
+    // Handle paste of full OTP
+    box.addEventListener('paste', (e) => {
+      e.preventDefault();
+      const pasted = (e.clipboardData || window.clipboardData)
+                      .getData('text').replace(/\D/g, '').slice(0, 6);
+      pasted.split('').forEach((ch, i) => {
+        if (boxes[i]) {
+          boxes[i].value = ch;
+          boxes[i].classList.add('filled');
+        }
+      });
+      if (pasted.length === 6) boxes[5].focus();
+      updateVerifyBtn();
+    });
+  });
+
+  // Focus first box on load
+  window.addEventListener('load', () => {
+    if (boxes[0]) boxes[0].focus();
+  });
+
+  // ─── Status helpers ─────────────────────────────────────────────────────────
+  function showMsg(type, text) {
+    const el = document.getElementById(type === 'success' ? 'successMsg' : 'errorMsg');
+    const other = document.getElementById(type === 'success' ? 'errorMsg' : 'successMsg');
+    other.style.display = 'none';
+    el.textContent = text;
+    el.style.display = 'block';
+  }
+
+  function clearMsgs() {
+    document.getElementById('successMsg').style.display = 'none';
+    document.getElementById('errorMsg').style.display = 'none';
+  }
+
+  function shakeBoxes() {
+    boxes.forEach(b => {
+      b.classList.add('error-shake');
+      setTimeout(() => b.classList.remove('error-shake'), 500);
+    });
+  }
+
+  // ─── Countdown timer ────────────────────────────────────────────────────────
+  let secondsLeft = EXPIRY;
+  let timerInterval = null;
+
+  function formatTime(s) {
+    const m = Math.floor(s / 60);
+    const sec = s % 60;
+    return `${m}:${sec.toString().padStart(2, '0')}`;
+  }
+
+  function startTimer() {
+    const timerLabel = document.getElementById('timerLabel');
+    const timerDisplay = document.getElementById('timerDisplay');
+    const resendRow = document.getElementById('resendRow');
+
+    secondsLeft = EXPIRY;
+    timerDisplay.textContent = formatTime(secondsLeft);
+    timerLabel.style.display = 'inline';
+    resendRow.style.display = 'none';
+
+    clearInterval(timerInterval);
+    timerInterval = setInterval(() => {
+      secondsLeft--;
+      if (secondsLeft <= 0) {
+        clearInterval(timerInterval);
+        timerLabel.style.display = 'none';
+        resendRow.style.display = 'inline';
+        showMsg('error', 'Your OTP has expired. Please request a new one.');
+        verifyBtn.disabled = true;
+        boxes.forEach(b => { b.value = ''; b.classList.remove('filled'); });
+        return;
+      }
+      timerDisplay.textContent = formatTime(secondsLeft);
+      // Show resend option after 60 s have elapsed (i.e. when 4 min remain)
+      if (secondsLeft <= EXPIRY - 60) {
+        timerLabel.style.display = 'none';
+        resendRow.style.display = 'inline';
+      }
+    }, 1000);
+  }
+
+  startTimer();
+
+  // ─── Resend OTP ─────────────────────────────────────────────────────────────
+  async function resendOTP() {
+    const btn = document.getElementById('resendBtn');
+    btn.disabled = true;
+    clearMsgs();
+
+    try {
+      const res  = await fetch('/api/send-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: EMAIL, user_type: UTYPE })
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        showMsg('success', '✅ A new OTP has been sent to your email.');
+        boxes.forEach(b => { b.value = ''; b.classList.remove('filled'); });
+        boxes[0].focus();
+        updateVerifyBtn();
+        startTimer();
+      } else {
+        showMsg('error', data.message || 'Failed to resend OTP.');
+        setTimeout(() => { btn.disabled = false; }, 30000);
+      }
+    } catch (err) {
+      showMsg('error', 'Network error. Please try again.');
+      btn.disabled = false;
+    }
+  }
+
+  // ─── Verify OTP form submit ─────────────────────────────────────────────────
+  document.getElementById('otpForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    clearMsgs();
+
+    const otp = getOTPValue();
+    if (otp.length !== 6) return;
+
+    verifyBtn.disabled = true;
+    verifyBtn.textContent = 'Verifying…';
+
+    try {
+      const res  = await fetch('/api/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: EMAIL, otp: otp, user_type: UTYPE })
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        clearInterval(timerInterval);
+        showMsg('success', '✅ Email verified! Completing your registration…');
+        verifyBtn.textContent = '✓ Verified';
+
+        // Retrieve pending registration payload from sessionStorage
+        const stored = sessionStorage.getItem('pendingRegistration');
+        if (!stored) {
+          showMsg('error', 'Registration data lost. Please go back and fill the form again.');
+          verifyBtn.disabled = false;
+          verifyBtn.textContent = 'Verify & Continue';
+          return;
+        }
+
+        const payload    = JSON.parse(stored);
+        const endpoint   = UTYPE === 'school' ? '/api/school/register' : '/api/parent/register';
+        const redirectTo = UTYPE === 'school' ? '/school.html'         : '/parent';
+
+        // Submit actual registration
+        const regRes  = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const regData = await regRes.json();
+
+        if (regData.success) {
+          sessionStorage.removeItem('pendingRegistration');
+          showMsg('success', '🎉 Account created! Redirecting…');
+          setTimeout(() => { window.location.href = redirectTo; }, 1200);
+        } else {
+          showMsg('error', regData.message || 'Registration failed after verification.');
+          verifyBtn.textContent = 'Verify & Continue';
+          verifyBtn.disabled = false;
+        }
+      } else {
+        shakeBoxes();
+        showMsg('error', data.message || 'Incorrect OTP. Please try again.');
+        verifyBtn.textContent = 'Verify & Continue';
+        verifyBtn.disabled = (getOTPValue().length !== 6);
+      }
+    } catch (err) {
+      showMsg('error', 'Network error. Please try again.');
+      verifyBtn.textContent = 'Verify & Continue';
+      verifyBtn.disabled = false;
+    }
+  });
+</script>
+</body>
+</html>
