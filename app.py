@@ -3086,7 +3086,6 @@ def participant_dashboard():
                 'Reading Aloud Task 1',
                 'Typing Task', 
                 'Reading Comprehension',
-                'Mathematical Comprehension',
                 'Writing Task',
                 'Aptitude Test',
                 'Listening Task',
@@ -3107,7 +3106,6 @@ def participant_dashboard():
                     ('Reading Aloud Task 1', 'reading_tasks'),
                     ('Typing Task', 'typing_tasks'), 
                     ('Reading Comprehension', 'reading_comprehension_tasks'),
-                    ('Mathematical Comprehension', 'mathematical_comprehension_tasks'),
                     ('Writing Task', 'writing_tasks'),
                     ('Aptitude Test', 'aptitude_tasks'),
                     ('Listening Task', 'listening_tasks'),
@@ -4038,7 +4036,6 @@ def api_allowed_tasks():
                 ('Reading Aloud Task 1', 'reading_tasks'),
                 ('Typing Task', 'typing_tasks'),
                 ('Reading Comprehension', 'reading_comprehension_tasks'),
-                ('Mathematical Comprehension', 'mathematical_comprehension_tasks'),
                 ('Writing Task', 'writing_tasks'),
                 ('Aptitude Test', 'aptitude_tasks'),
                 ('Listening Task', 'listening_tasks'),
@@ -7982,7 +7979,7 @@ def admin_users_list():
         ''')
         users = cursor.fetchall()
         # Define the set of all tasks
-        all_tasks = ['Reading Aloud Task 1', 'Typing Task', 'Reading Comprehension', 'Mathematical Comprehension', 'Writing Task', 'Aptitude Test', 'Listening Task', 'Visual Task']
+        all_tasks = ['Reading Aloud Task 1', 'Typing Task', 'Reading Comprehension', 'Writing Task', 'Aptitude Test', 'Listening Task', 'Visual Task']
         total_tasks = len(all_tasks)
         for user in users:
             # Get completed tasks for this user (only those in all_tasks)
@@ -8144,7 +8141,7 @@ def admin_users_grouped():
         schools = cursor.fetchall()
 
         # Compute progress for parents and children
-        all_tasks = ['Reading Aloud Task 1', 'Typing Task', 'Reading Comprehension', 'Mathematical Comprehension', 'Writing Task', 'Aptitude Test', 'Listening Task', 'Visual Task']
+        all_tasks = ['Reading Aloud Task 1', 'Typing Task', 'Reading Comprehension', 'Writing Task', 'Aptitude Test', 'Listening Task', 'Visual Task']
         total_tasks = len(all_tasks)
         def attach_progress(users):
             for u in users:
@@ -8171,7 +8168,7 @@ def admin_users_grouped():
             ''', (s['id'],))
             s['num_children'] = cursor.fetchone()['c']
 
-            core_tasks = ['Reading Aloud Task 1', 'Typing Task', 'Reading Comprehension', 'Mathematical Comprehension', 'Writing Task', 'Aptitude Test', 'Listening Task', 'Visual Task']
+            core_tasks = ['Reading Aloud Task 1', 'Typing Task', 'Reading Comprehension', 'Writing Task', 'Aptitude Test', 'Listening Task', 'Visual Task']
             cursor.execute('''
                 SELECT u.id
                 FROM users u
@@ -9698,7 +9695,17 @@ def get_student_scores(user_id):
         cursor.execute("""
             SELECT COUNT(*) as completed FROM user_tasks 
             WHERE user_id = %s AND status = 'Completed'
-        """, (user_id,))
+            AND task_name IN (%s, %s, %s, %s, %s, %s, %s)
+        """, (
+            user_id,
+            'Reading Aloud Task 1',
+            'Typing Task',
+            'Reading Comprehension',
+            'Writing Task',
+            'Aptitude Test',
+            'Listening Task',
+            'Visual Task'
+        ))
         completed_result = cursor.fetchone()
         stats['progress']['completed'] = completed_result['completed'] if completed_result else 0
         if stats['progress']['total'] > 0:
@@ -10012,7 +10019,7 @@ def get_student_scores(user_id):
             badges.append({'name': 'First Steps', 'icon': '🎯', 'description': 'Completed your first task'})
         if completed_tasks >= 3:
             badges.append({'name': 'Getting Started', 'icon': '🚀', 'description': 'Completed 3 tasks'})
-        if completed_tasks >= 8:
+        if completed_tasks >= 7:
             badges.append({'name': 'Task Master', 'icon': '🏆', 'description': 'Completed all tasks'})
         
         # Performance badges
@@ -10173,7 +10180,7 @@ def check_new_badges():
                 session['badge_getting_started'] = True
                 print("Badge: Getting Started earned")
         
-        if completed_tasks >= 8:
+        if completed_tasks >= 7:
             if not session.get('badge_task_master', False):
                 new_badges.append({'name': 'Task Master', 'icon': '🏆', 'description': 'Completed all tasks'})
                 session['badge_task_master'] = True
@@ -10182,7 +10189,6 @@ def check_new_badges():
         # Check for performance badges
         task_configs = [
             ('Reading Comprehension', 'comprehension_progress', 'score', 'max_score'),
-            ('Mathematical Comprehension', 'mathematical_comprehension_progress', 'score', 'max_score'),
             ('Aptitude Test', 'aptitude_progress', 'total_score', 'max_score'),
             ('Listening Task', 'listening_progress', 'score', 'max_score'),
             ('Visual Task', 'visual_progress', 'score', 'max_score')
