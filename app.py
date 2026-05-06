@@ -11,6 +11,8 @@ import smtplib
 import secrets
 import threading
 import time
+import base64
+import requests
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from werkzeug.utils import secure_filename
@@ -41,6 +43,49 @@ CORS(app)
 _otp_store: dict = {}
 _otp_lock = threading.Lock()
 OTP_EXPIRY_SECONDS = int(os.getenv("OTP_EXPIRY_SECONDS", 300))   # 5 minutes default
+OTP_MAX_ATTEMPTS = int(os.getenv("OTP_MAX_ATTEMPTS", 5))
+
+
+def _is_valid_email(email: str) -> bool:
+    """Basic email format validation for OTP/register APIs."""
+    return bool(re.match(r"^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$", email or ""))
+
+
+def _get_gmail_access_token() -> str:
+    """
+    Exchanges a Gmail OAuth2 refresh token for a short-lived access token.
+    Required env:
+      MAIL_SENDER_EMAIL
+      GOOGLE_MAIL_CLIENT_ID
+      GOOGLE_MAIL_CLIENT_SECRET
+      GOOGLE_MAIL_REFRESH_TOKEN
+    """
+    client_id = os.getenv("GOOGLE_MAIL_CLIENT_ID", "").strip()
+    client_secret = os.getenv("GOOGLE_MAIL_CLIENT_SECRET", "").strip()
+    refresh_token = os.getenv("GOOGLE_MAIL_REFRESH_TOKEN", "").strip()
+
+    if not client_id or not client_secret or not refresh_token:
+        print("[OTP] Missing Gmail OAuth2 env (GOOGLE_MAIL_CLIENT_ID / GOOGLE_MAIL_CLIENT_SECRET / GOOGLE_MAIL_REFRESH_TOKEN)")
+        return ""
+
+    try:
+        resp = requests.post(
+            "https://oauth2.googleapis.com/token",
+            data={
+                "client_id": client_id,
+                "client_secret": client_secret,
+                "refresh_token": refresh_token,
+                "grant_type": "refresh_token",
+            },
+            timeout=15,
+        )
+        if resp.status_code != 200:
+            print(f"[OTP] OAuth token exchange failed: {resp.status_code} {resp.text}")
+            return ""
+        return resp.json().get("access_token", "")
+    except Exception as exc:
+        print(f"[OTP] OAuth token exchange error: {exc}")
+        return ""
 
 def _purge_expired_otps():
     """Background task that removes expired OTP entries every 60 s."""
@@ -59,14 +104,18 @@ _purge_thread.start()
 
 def _send_otp_email(recipient_email: str, otp: str, user_type: str) -> bool:
     """
-    Sends a 6-digit OTP to *recipient_email* via Gmail SMTP (TLS on port 587).
+    Sends a 6-digit OTP to *recipient_email* via Gmail SMTP + OAuth2 (XOAUTH2).
     Returns True on success, False on failure.
     """
-    sender_email = os.getenv("MAIL_SENDER_EMAIL", "")
-    sender_password = os.getenv("MAIL_SENDER_APP_PASSWORD", "")
+    sender_email = os.getenv("MAIL_SENDER_EMAIL", "").strip()
 
-    if not sender_email or not sender_password:
-        print("[OTP] MAIL_SENDER_EMAIL or MAIL_SENDER_APP_PASSWORD not configured in .env")
+    if not sender_email:
+        print("[OTP] MAIL_SENDER_EMAIL not configured in .env")
+        return False
+
+    access_token = _get_gmail_access_token()
+    if not access_token:
+        print("[OTP] Could not obtain Gmail OAuth2 access token.")
         return False
 
     account_label = "School" if user_type == "school" else "Parent"
@@ -140,7 +189,9 @@ def _send_otp_email(recipient_email: str, otp: str, user_type: str) -> bool:
         with smtplib.SMTP('smtp.gmail.com', 587, timeout=15) as server:
             server.ehlo()
             server.starttls()
-            server.login(sender_email, sender_password)
+            auth_string = f"user={sender_email}\x01auth=Bearer {access_token}\x01\x01"
+            auth_bytes = base64.b64encode(auth_string.encode("utf-8"))
+            server.docmd("AUTH", "XOAUTH2 " + auth_bytes.decode("utf-8"))
             server.sendmail(sender_email, recipient_email, msg.as_string())
         print(f"[OTP] Email sent to {recipient_email}")
         return True
@@ -619,10 +670,6 @@ def school_page():
 def school_signup():
     return render_template('school_signup.html')
 
-@app.route('/parent-signup')
-def parent_signup():
-    return render_template('parent_signup.html')
-    
 @app.route('/student-signin')
 def student_signin():
     return render_template('student_signin.html')
@@ -911,7 +958,7 @@ def api_register():
             return jsonify({'success': False, 'message': 'No data received'}), 400
         
         # Extract form data
-        email = data.get('email', '').strip()
+        email = data.get('email', '').strip().lower()
         password = data.get('password', '')
         
         # Validation
@@ -1095,7 +1142,7 @@ def unified_login():
         if not data:
             return jsonify({'success': False, 'message': 'No data received'}), 400
         
-        email = data.get('email', '').strip()
+        email = data.get('email', '').strip().lower()
         password = data.get('password', '')
         
         if not email or not password:
@@ -1269,8 +1316,14 @@ def api_send_otp():
 
         if not email:
             return jsonify({'success': False, 'message': 'Email is required'}), 400
+        if not _is_valid_email(email):
+            return jsonify({'success': False, 'message': 'Please enter a valid email address'}), 400
         if user_type not in ('parent', 'school'):
             return jsonify({'success': False, 'message': 'Invalid user_type'}), 400
+        if user_type == 'parent' and check_user_exists(email):
+            return jsonify({'success': False, 'message': 'A parent/user account with this email already exists. Please sign in.'}), 409
+        if user_type == 'school' and check_school_exists(email):
+            return jsonify({'success': False, 'message': 'A school account with this email already exists. Please sign in.'}), 409
 
         # Rate-limit: if a *valid* (non-expired) OTP already exists, block re-send
         # unless the client explicitly asks for a resend (handled separately below).
@@ -1294,7 +1347,8 @@ def api_send_otp():
                 'otp':       otp,
                 'expires_at': time.time() + OTP_EXPIRY_SECONDS,
                 'user_type': user_type,
-                'verified':  False
+                'verified':  False,
+                'attempts':  0
             }
 
         # Send email (do NOT block the request if email fails; surface error to user)
@@ -1337,6 +1391,10 @@ def api_verify_otp():
 
         if not email or not otp_input:
             return jsonify({'success': False, 'message': 'Email and OTP are required'}), 400
+        if not _is_valid_email(email):
+            return jsonify({'success': False, 'message': 'Please enter a valid email address'}), 400
+        if user_type not in ('parent', 'school'):
+            return jsonify({'success': False, 'message': 'Invalid user type'}), 400
 
         with _otp_lock:
             record = _otp_store.get(email)
@@ -1349,7 +1407,17 @@ def api_verify_otp():
                 _otp_store.pop(email, None)
             return jsonify({'success': False, 'message': 'OTP has expired. Please request a new one.'}), 400
 
+        if record.get('user_type') != user_type:
+            return jsonify({'success': False, 'message': 'OTP session mismatch. Please request a new code.'}), 400
+
         if record['otp'] != otp_input:
+            with _otp_lock:
+                refreshed_record = _otp_store.get(email)
+                if refreshed_record:
+                    refreshed_record['attempts'] = refreshed_record.get('attempts', 0) + 1
+                    if refreshed_record['attempts'] >= OTP_MAX_ATTEMPTS:
+                        _otp_store.pop(email, None)
+                        return jsonify({'success': False, 'message': 'Too many failed attempts. Please request a new OTP.'}), 429
             return jsonify({'success': False, 'message': 'Incorrect OTP. Please try again.'}), 400
 
         # Mark as verified in store and stamp session
@@ -1390,6 +1458,8 @@ def parent_register():
 
         if not name or not email or not password:
             return jsonify({'success': False, 'message': 'All fields are required'}), 400
+        if not _is_valid_email(email):
+            return jsonify({'success': False, 'message': 'Please enter a valid email address'}), 400
 
         # ── OTP gate ─────────────────────────────────────────────────────────
         verified_email     = session.get('otp_verified_email', '').lower()
@@ -1680,6 +1750,8 @@ def school_register():
         # Validation
         if not name or not email or not password:
             return jsonify({'success': False, 'message': 'Name, email, and password are required'}), 400
+        if not _is_valid_email(email):
+            return jsonify({'success': False, 'message': 'Please enter a valid email address'}), 400
         
         # Check if school already exists
         if check_school_exists(email):
