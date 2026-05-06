@@ -237,7 +237,8 @@ def calculate_typing_metrics(text, keystrokes_data, reference_text=None):
             metrics['spelling_error_rate'] = 0.0 
         
         # 2. Sentence Length Variance
-        sentences = re.split(r"[.!?]+", text)
+        # Split by sentence punctuation and line breaks so multi-line responses are handled.
+        sentences = re.split(r"[.!?\n]+", text)
         sentence_lengths = [len(s.split()) for s in sentences if s.strip()]
         if len(sentence_lengths) > 1:
             metrics['sentence_length_variance'] = float(np.var(sentence_lengths))
@@ -264,9 +265,9 @@ def calculate_typing_metrics(text, keystrokes_data, reference_text=None):
             metrics['insertions'] = insertions
             metrics['deletions'] = deletions
             
-            # User requirement: (insertions + deletions) / max(1, total_characters)
-            # Assuming total_characters is the length of final text
-            metrics['edit_density'] = (insertions + deletions) / max(1, len(text))
+            # Edit Density should reflect correction behavior (lower is better),
+            # so use deletion actions per final character.
+            metrics['edit_density'] = deletions / max(1, len(text))
             
     except Exception as e:
         print(f"Error calculating typing metrics: {e}")
@@ -8288,8 +8289,13 @@ def get_student_scores(user_id):
         # Get user's class level for class averages
         class_level = _get_user_class_level(conn, user_id)
         
+        # Calculate total available tasks dynamically (avoid hardcoded count).
+        cursor.execute("SELECT COUNT(*) as total_tasks FROM tasks")
+        total_tasks_row = cursor.fetchone() or {}
+        total_tasks = total_tasks_row.get('total_tasks') or 0
+
         stats = {
-            'progress': {'completed': 0, 'total': 6, 'percentage': 0},
+            'progress': {'completed': 0, 'total': total_tasks, 'percentage': 0},
             'time_spent': {},
             'class_averages': {},
             'personal_bests': {},
@@ -8310,7 +8316,10 @@ def get_student_scores(user_id):
         """, (user_id,))
         completed_result = cursor.fetchone()
         stats['progress']['completed'] = completed_result['completed'] if completed_result else 0
-        stats['progress']['percentage'] = round((stats['progress']['completed'] / stats['progress']['total']) * 100, 1)
+        if stats['progress']['total'] > 0:
+            stats['progress']['percentage'] = round((stats['progress']['completed'] / stats['progress']['total']) * 100, 1)
+        else:
+            stats['progress']['percentage'] = 0
         
         # 2. Calculate time spent on each task (only for completed attempts)
         # For typing tasks, use typing_progress.timer (in seconds) - show actual time not average
@@ -8435,7 +8444,9 @@ def get_student_scores(user_id):
                 FROM typing_progress tp
                 JOIN user_task_attempts uta ON tp.attempt_id = uta.id
                 WHERE uta.user_id = %s
-                ORDER BY tp.updated_at DESC
+                  AND uta.status = 'Completed'
+                  AND uta.completed_at IS NOT NULL
+                ORDER BY uta.completed_at DESC, tp.updated_at DESC
                 LIMIT 1
             """, (user_id,))
             typing_result = cursor.fetchone()
