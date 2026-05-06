@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Verify Your Email – Dyslexia Research Study</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='landing_style.css') }}">
+  <style>
+    .otp-card {
+      background: #ffffff;
+      border-radius: 14px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+      border: 1px solid #e5e7eb;
+      width: 100%;
+      max-width: 560px;
+      margin: 0 auto;
+      padding: 1.5rem;
+    }
+    .email-badge {
+      display: inline-block;
+      background: #eef2ff;
+      border: 1px solid #c7d2fe;
+      border-radius: 100px;
+      padding: 6px 14px;
+      color: #1a237e;
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 18px;
+      word-break: break-all;
+    }
+    .otp-inputs {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      margin-bottom: 20px;
+    }
+    .otp-box {
+      width: 48px;
+      height: 54px;
+      background: #f9fafb;
+      border: 1px solid #d1d5db;
+      border-radius: 10px;
+      color: #111827;
+      font-size: 22px;
+      font-weight: 700;
+      text-align: center;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      caret-color: #1a237e;
+    }
+    .otp-box:focus {
+      border-color: #1a237e;
+      box-shadow: 0 0 0 3px rgba(26, 35, 126, 0.12);
+    }
+    .otp-box.filled {
+      border-color: #3a74cc;
+    }
+    .otp-box.error-shake {
+      border-color: #dc2626;
+      animation: shake 0.4s ease;
+    }
+    @keyframes shake {
+      0%,100% { transform: translateX(0); }
+      20%      { transform: translateX(-6px); }
+      40%      { transform: translateX(6px); }
+      60%      { transform: translateX(-4px); }
+      80%      { transform: translateX(4px); }
+    }
+    .btn-verify {
+      width: 100%;
+      padding: 12px;
+      background: #1a237e;
+      color: #fff;
+      font-size: 15px;
+      font-weight: 600;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    .btn-verify:hover:not(:disabled) {
+      background: #3a74cc;
+    }
+    .btn-verify:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .timer-row {
+      margin-top: 14px;
+      font-size: 13px;
+      color: #4b5563;
+    }
+    .resend-btn {
+      background: none;
+      border: none;
+      color: #1a237e;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      padding: 0;
+      text-decoration: underline;
+    }
+    .resend-btn:hover { color: #3a74cc; }
+    .resend-btn:disabled { color: #9ca3af; cursor: not-allowed; text-decoration: none; }
+    .msg {
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 13px;
+      font-weight: 500;
+      margin-bottom: 12px;
+      display: none;
+      text-align: left;
+    }
+    .msg.success { background: #ecfdf5; border: 1px solid #86efac; color: #166534; }
+    .msg.error   { background: #fef2f2; border: 1px solid #fca5a5; color: #b91c1c; }
+    .back-link {
+      display: inline-block;
+      margin-top: 18px;
+      color: #1a237e;
+      font-size: 13px;
+      text-decoration: none;
+      font-weight: 500;
+    }
+    .back-link:hover { color: #3a74cc; text-decoration: underline; }
+    .step-dots {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 18px;
+    }
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #d1d5db;
+    }
+    .dot.active { background: #1a237e; }
+    .dot.done   { background: #3a74cc; }
+    @media (max-width: 480px) {
+      .otp-card { padding: 1rem; }
+      .otp-box { width: 42px; height: 48px; font-size: 20px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="primary-bg text-white py-4 md:py-6">
+    <div class="content-wrapper flex justify-between items-center px-3 sm:px-4">
+      <div class="flex items-center flex-1 min-w-0">
+        <img src="{{ url_for('static', filename='gauge.png') }}" alt="Dashboard Graphic"
+             class="h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 rounded-full mr-2 sm:mr-3 md:mr-4 hidden sm:block flex-shrink-0">
+        <h1 class="text-base sm:text-lg md:text-xl lg:text-2xl font-bold truncate">Email Verification</h1>
+      </div>
+      <nav class="hidden md:block">
+        <ul class="flex space-x-3 md:space-x-4 lg:space-x-6 text-sm md:text-base lg:text-lg items-center">
+          <li><a href="{{ url_for('landing') }}" class="hover:text-yellow-100 transition">Homepage</a></li>
+          <li><a href="{{ url_for('landing') }}#contact" class="hover:text-yellow-100 transition">Contact</a></li>
+          <li><a href="{{ url_for('signin') }}" class="hover:text-yellow-100 transition">Sign In</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main class="content-wrapper py-8 sm:py-10 md:py-12 px-3 sm:px-4">
+    <div class="otp-card">
+      <div class="step-dots">
+        <div class="dot done"></div>
+        <div class="dot active"></div>
+        <div class="dot"></div>
+      </div>
+
+      <h2 class="text-xl sm:text-2xl font-bold text-gray-800 text-center mb-2">Verify Your Email</h2>
+      <p class="text-sm text-gray-500 text-center mb-4">We sent a 6-digit code to</p>
+      <div class="text-center">
+        <div class="email-badge" id="emailBadge">—</div>
+      </div>
+
+      <div class="msg" id="successMsg"></div>
+      <div class="msg" id="errorMsg"></div>
+
+      <form id="otpForm" autocomplete="off">
+        <div class="otp-inputs" id="otpInputs">
+          <input class="otp-box" type="text" inputmode="numeric" maxlength="1" data-index="0" id="otp0" aria-label="OTP digit 1">
+          <input class="otp-box" type="text" inputmode="numeric" maxlength="1" data-index="1" id="otp1" aria-label="OTP digit 2">
+          <input class="otp-box" type="text" inputmode="numeric" maxlength="1" data-index="2" id="otp2" aria-label="OTP digit 3">
+          <input class="otp-box" type="text" inputmode="numeric" maxlength="1" data-index="3" id="otp3" aria-label="OTP digit 4">
+          <input class="otp-box" type="text" inputmode="numeric" maxlength="1" data-index="4" id="otp4" aria-label="OTP digit 5">
+          <input class="otp-box" type="text" inputmode="numeric" maxlength="1" data-index="5" id="otp5" aria-label="OTP digit 6">
+        </div>
+
+        <button type="submit" class="btn-verify" id="verifyBtn" disabled>
+          Verify &amp; Continue
+        </button>
+      </form>
+
+      <div class="timer-row text-center">
+        <span id="timerLabel">Code expires in <strong id="timerDisplay">5:00</strong></span>
+        <span id="resendRow" style="display:none;">
+          Didn't receive it?
+          <button class="resend-btn" id="resendBtn" onclick="resendOTP()">Resend Code</button>
+        </span>
+      </div>
+
+      <div class="text-center">
+        <a href="#" class="back-link" id="backLink">← Back to Registration</a>
+      </div>
+    </div>
+  </main>
+
+<script>
+  // ─── Read URL params ────────────────────────────────────────────────────────
+  const params   = new URLSearchParams(window.location.search);
+  const EMAIL    = (params.get('email') || '').toLowerCase().trim();
+  const UTYPE    = (params.get('user_type') || 'parent').toLowerCase().trim();
+  const EXPIRY   = 300; // seconds, matches server default
+
+  // Update UI with email
+  document.getElementById('emailBadge').textContent = EMAIL || '(unknown)';
+
+  // Back link
+  document.getElementById('backLink').href =
+    UTYPE === 'school' ? '/school-signup' : '/parent-signup';
+
+  // ─── OTP digit boxes ────────────────────────────────────────────────────────
+  const boxes      = Array.from(document.querySelectorAll('.otp-box'));
+  const verifyBtn  = document.getElementById('verifyBtn');
+
+  function getOTPValue() {
+    return boxes.map(b => b.value).join('');
+  }
+
+  function updateVerifyBtn() {
+    const val = getOTPValue();
+    verifyBtn.disabled = val.length !== 6;
+  }
+
+  boxes.forEach((box, idx) => {
+    box.addEventListener('input', (e) => {
+      const v = e.target.value.replace(/\D/g, '');
+      box.value = v ? v[0] : '';
+      box.classList.toggle('filled', box.value !== '');
+      if (box.value && idx < 5) boxes[idx + 1].focus();
+      updateVerifyBtn();
+    });
+
+    box.addEventListener('keydown', (e) => {
+      if (e.key === 'Backspace') {
+        if (!box.value && idx > 0) {
+          boxes[idx - 1].value = '';
+          boxes[idx - 1].classList.remove('filled');
+          boxes[idx - 1].focus();
+        }
+        box.classList.remove('filled');
+        updateVerifyBtn();
+      }
+      if (e.key === 'ArrowLeft' && idx > 0)  boxes[idx - 1].focus();
+      if (e.key === 'ArrowRight' && idx < 5) boxes[idx + 1].focus();
+    });
+
+    // Handle paste of full OTP
+    box.addEventListener('paste', (e) => {
+      e.preventDefault();
+      const pasted = (e.clipboardData || window.clipboardData)
+                      .getData('text').replace(/\D/g, '').slice(0, 6);
+      pasted.split('').forEach((ch, i) => {
+        if (boxes[i]) {
+          boxes[i].value = ch;
+          boxes[i].classList.add('filled');
+        }
+      });
+      if (pasted.length === 6) boxes[5].focus();
+      updateVerifyBtn();
+    });
+  });
+
+  // Focus first box on load
+  window.addEventListener('load', () => {
+    if (boxes[0]) boxes[0].focus();
+  });
+
+  // ─── Status helpers ─────────────────────────────────────────────────────────
+  function showMsg(type, text) {
+    const el = document.getElementById(type === 'success' ? 'successMsg' : 'errorMsg');
+    const other = document.getElementById(type === 'success' ? 'errorMsg' : 'successMsg');
+    other.style.display = 'none';
+    el.textContent = text;
+    el.style.display = 'block';
+  }
+
+  function clearMsgs() {
+    document.getElementById('successMsg').style.display = 'none';
+    document.getElementById('errorMsg').style.display = 'none';
+  }
+
+  function shakeBoxes() {
+    boxes.forEach(b => {
+      b.classList.add('error-shake');
+      setTimeout(() => b.classList.remove('error-shake'), 500);
+    });
+  }
+
+  // ─── Countdown timer ────────────────────────────────────────────────────────
+  let secondsLeft = EXPIRY;
+  let timerInterval = null;
+
+  function formatTime(s) {
+    const m = Math.floor(s / 60);
+    const sec = s % 60;
+    return `${m}:${sec.toString().padStart(2, '0')}`;
+  }
+
+  function startTimer() {
+    const timerLabel = document.getElementById('timerLabel');
+    const timerDisplay = document.getElementById('timerDisplay');
+    const resendRow = document.getElementById('resendRow');
+
+    secondsLeft = EXPIRY;
+    timerDisplay.textContent = formatTime(secondsLeft);
+    timerLabel.style.display = 'inline';
+    resendRow.style.display = 'none';
+
+    clearInterval(timerInterval);
+    timerInterval = setInterval(() => {
+      secondsLeft--;
+      if (secondsLeft <= 0) {
+        clearInterval(timerInterval);
+        timerLabel.style.display = 'none';
+        resendRow.style.display = 'inline';
+        showMsg('error', 'Your OTP has expired. Please request a new one.');
+        verifyBtn.disabled = true;
+        boxes.forEach(b => { b.value = ''; b.classList.remove('filled'); });
+        return;
+      }
+      timerDisplay.textContent = formatTime(secondsLeft);
+      // Show resend option after 60 s have elapsed (i.e. when 4 min remain)
+      if (secondsLeft <= EXPIRY - 60) {
+        timerLabel.style.display = 'none';
+        resendRow.style.display = 'inline';
+      }
+    }, 1000);
+  }
+
+  startTimer();
+
+  // ─── Resend OTP ─────────────────────────────────────────────────────────────
+  async function resendOTP() {
+    const btn = document.getElementById('resendBtn');
+    btn.disabled = true;
+    clearMsgs();
+
+    try {
+      const res  = await fetch('/api/send-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: EMAIL, user_type: UTYPE })
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        showMsg('success', '✅ A new OTP has been sent to your email.');
+        boxes.forEach(b => { b.value = ''; b.classList.remove('filled'); });
+        boxes[0].focus();
+        updateVerifyBtn();
+        startTimer();
+      } else {
+        showMsg('error', data.message || 'Failed to resend OTP.');
+        setTimeout(() => { btn.disabled = false; }, 30000);
+      }
+    } catch (err) {
+      showMsg('error', 'Network error. Please try again.');
+      btn.disabled = false;
+    }
+  }
+
+  // ─── Verify OTP form submit ─────────────────────────────────────────────────
+  document.getElementById('otpForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    clearMsgs();
+
+    const otp = getOTPValue();
+    if (otp.length !== 6) return;
+
+    verifyBtn.disabled = true;
+    verifyBtn.textContent = 'Verifying…';
+
+    try {
+      const res  = await fetch('/api/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: EMAIL, otp: otp, user_type: UTYPE })
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        clearInterval(timerInterval);
+        showMsg('success', '✅ Email verified! Completing your registration…');
+        verifyBtn.textContent = '✓ Verified';
+
+        // Retrieve pending registration payload from sessionStorage
+        const stored = sessionStorage.getItem('pendingRegistration');
+        if (!stored) {
+          showMsg('error', 'Registration data lost. Please go back and fill the form again.');
+          verifyBtn.disabled = false;
+          verifyBtn.textContent = 'Verify & Continue';
+          return;
+        }
+
+        const payload    = JSON.parse(stored);
+        const endpoint   = UTYPE === 'school' ? '/api/school/register' : '/api/parent/register';
+        const redirectTo = UTYPE === 'school' ? '/school.html'         : '/parent';
+
+        // Submit actual registration
+        const regRes  = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const regData = await regRes.json();
+
+        if (regData.success) {
+          sessionStorage.removeItem('pendingRegistration');
+          showMsg('success', '🎉 Account created! Redirecting…');
+          setTimeout(() => { window.location.href = redirectTo; }, 1200);
+        } else {
+          showMsg('error', regData.message || 'Registration failed after verification.');
+          verifyBtn.textContent = 'Verify & Continue';
+          verifyBtn.disabled = false;
+        }
+      } else {
+        shakeBoxes();
+        showMsg('error', data.message || 'Incorrect OTP. Please try again.');
+        verifyBtn.textContent = 'Verify & Continue';
+        verifyBtn.disabled = (getOTPValue().length !== 6);
+      }
+    } catch (err) {
+      showMsg('error', 'Network error. Please try again.');
+      verifyBtn.textContent = 'Verify & Continue';
+      verifyBtn.disabled = false;
+    }
+  });
+</script>
+</body>
+</html>
