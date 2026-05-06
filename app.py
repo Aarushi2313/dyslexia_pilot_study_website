@@ -664,6 +664,35 @@ def resolve_visual_image_url(task):
                 return f"/static/visual_tasks/{os.path.basename(matches[0])}"
     return None
 
+def _get_class_media_urls(media_type, class_level):
+    """Return sorted static media URLs for a class from naming patterns like class1_audio2.mp3."""
+    if not class_level:
+        return []
+
+    class_level_str = str(class_level)
+    media_dir_name = 'audio_tasks' if media_type == 'audio' else 'visual_tasks'
+    prefix = f"class{class_level_str}_{media_type}"
+    media_dir = os.path.join(app.static_folder, media_dir_name)
+
+    if not os.path.exists(media_dir):
+        return []
+
+    indexed_files = []
+    for filename in os.listdir(media_dir):
+        lower_name = filename.lower()
+        if not lower_name.startswith(prefix):
+            continue
+
+        # Supports class1_audio1.mp3, class1_audio2.mp3 ... and class1_audio.mp3
+        match = re.match(rf"^class{re.escape(class_level_str)}_{media_type}(\d+)?\.[^.]+$", lower_name)
+        if not match:
+            continue
+        index = int(match.group(1)) if match and match.group(1) else 0
+        indexed_files.append((index, filename))
+
+    indexed_files.sort(key=lambda x: (x[0], x[1].lower()))
+    return [f"/static/{media_dir_name}/{name}" for _, name in indexed_files]
+
 def connect_db():
     """Establishes a connection to the MySQL database."""
     try:
@@ -4263,14 +4292,7 @@ def api_allowed_tasks():
             
             for task_name, table_name in task_categories:
                 # Check if there are class-appropriate tasks for this category
-                if task_name in ('Listening Task', 'Visual Task'):
-                    cursor.execute(
-                        f"SELECT COUNT(*) as count FROM {table_name} "
-                        "WHERE class_level = %s AND question1 IS NOT NULL AND question1 != ''",
-                        (class_level,)
-                    )
-                else:
-                    cursor.execute(f"SELECT COUNT(*) as count FROM {table_name} WHERE class_level = %s", (class_level,))
+                cursor.execute(f"SELECT COUNT(*) as count FROM {table_name} WHERE class_level = %s", (class_level,))
                 count_result = cursor.fetchone()
                 if count_result and count_result['count'] > 0:
                     allowed.append(task_name)
@@ -7021,8 +7043,12 @@ def get_listening_tasks(user_id):
 
         tasks = cursor.fetchall()
 
-        for task in tasks:
-            task['audio_url'] = resolve_listening_audio_url(task)
+        class_audio_urls = _get_class_media_urls('audio', class_level)
+        for idx, task in enumerate(tasks):
+            resolved_audio = resolve_listening_audio_url(task)
+            if not resolved_audio and idx < len(class_audio_urls):
+                resolved_audio = class_audio_urls[idx]
+            task['audio_url'] = resolved_audio
 
         cursor.close(); conn.close()
 
@@ -7062,13 +7088,34 @@ def get_listening_task_by_id(task_id):
             (task_id,)
         )
         task = cursor.fetchone()
-        cursor.close(); conn.close()
+        cursor.close()
 
         if not task:
+            conn.close()
             return jsonify({'success': False, 'message': 'Listening task not found'}), 404
 
-        task['audio_url'] = resolve_listening_audio_url(task)
+        resolved_audio = resolve_listening_audio_url(task)
+        if not resolved_audio:
+            class_level = task.get('class_level')
+            if class_level:
+                cursor = conn.cursor(dictionary=True)
+                cursor.execute("""
+                    SELECT id
+                    FROM listening_tasks
+                    WHERE class_level = %s
+                    ORDER BY difficulty_level, class_level, id
+                """, (class_level,))
+                class_task_ids = [row['id'] for row in cursor.fetchall()]
+                cursor.close()
+                class_audio_urls = _get_class_media_urls('audio', class_level)
+                if task['id'] in class_task_ids:
+                    idx = class_task_ids.index(task['id'])
+                    if idx < len(class_audio_urls):
+                        resolved_audio = class_audio_urls[idx]
 
+        task['audio_url'] = resolved_audio
+
+        conn.close()
         return jsonify({'success': True, 'task': task})
 
     except Exception as e:
@@ -7456,6 +7503,13 @@ def get_visual_tasks(user_id):
             return jsonify({'success': False, 'message': 'Database connection failed'}), 500
 
         cursor = conn.cursor(dictionary=True)
+
+        # Verify user exists
+        cursor.execute("SELECT id FROM users WHERE id = %s", (user_id,))
+        if not cursor.fetchone():
+            cursor.close(); conn.close()
+            return jsonify({'success': False, 'message': 'User not found'}), 404
+
         class_level = _get_user_class_level(conn, user_id)
 
         cursor.execute("SHOW TABLES LIKE 'visual_tasks'")
@@ -7487,8 +7541,12 @@ def get_visual_tasks(user_id):
             )
 
         tasks = cursor.fetchall()
-        for task in tasks:
-            task['image_url'] = resolve_visual_image_url(task)
+        class_visual_urls = _get_class_media_urls('visual', class_level)
+        for idx, task in enumerate(tasks):
+            resolved_image = resolve_visual_image_url(task)
+            if not resolved_image and idx < len(class_visual_urls):
+                resolved_image = class_visual_urls[idx]
+            task['image_url'] = resolved_image
         cursor.close(); conn.close()
 
         if not tasks:
@@ -7525,12 +7583,33 @@ def get_visual_task_by_id(task_id):
             (task_id,)
         )
         task = cursor.fetchone()
-        cursor.close(); conn.close()
+        cursor.close()
 
         if not task:
+            conn.close()
             return jsonify({'success': False, 'message': 'Visual task not found'}), 404
 
-        task['image_url'] = resolve_visual_image_url(task)
+        resolved_image = resolve_visual_image_url(task)
+        if not resolved_image:
+            class_level = task.get('class_level')
+            if class_level:
+                cursor = conn.cursor(dictionary=True)
+                cursor.execute("""
+                    SELECT id
+                    FROM visual_tasks
+                    WHERE class_level = %s
+                    ORDER BY difficulty_level, id
+                """, (class_level,))
+                class_task_ids = [row['id'] for row in cursor.fetchall()]
+                cursor.close()
+                class_visual_urls = _get_class_media_urls('visual', class_level)
+                if task['id'] in class_task_ids:
+                    idx = class_task_ids.index(task['id'])
+                    if idx < len(class_visual_urls):
+                        resolved_image = class_visual_urls[idx]
+
+        task['image_url'] = resolved_image
+        conn.close()
         return jsonify({'success': True, 'task': task})
     except Exception as e:
         print(f"Get visual task by ID error: {e}")
