@@ -2358,7 +2358,7 @@ Example: ${task.example || 'N/A'}
                     const child = groupedUsers.children.find(c => c.id == childId);
                     if (child) {
                         // Recalculate progress
-                        const allTasks = ['Reading Aloud Task 1', 'Typing Task', 'Reading Comprehension', 'Mathematical Comprehension', 'Writing Task', 'Aptitude Test']
+                        const allTasks = ['Reading Aloud Task 1', 'Typing Task', 'Reading Comprehension', 'Mathematical Comprehension', 'Writing Task', 'Aptitude Test', 'Listening Task']
                         const completedTasks = allTasks.filter(task => {
                             if (task === taskName) {
                                 return newStatus === 'Completed';
