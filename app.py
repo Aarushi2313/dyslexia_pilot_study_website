@@ -439,6 +439,101 @@ def ensure_listening_tasks_table():
         except Exception:
             pass
 
+def ensure_visual_progress_table():
+    """Create or upgrade visual_progress so it matches other progress tables."""
+    conn = connect_db()
+    if not conn:
+        return
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS visual_progress (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                attempt_id INT NOT NULL,
+                q1 TEXT,
+                q2 VARCHAR(255) DEFAULT NULL,
+                q3 TEXT,
+                status ENUM('In Progress','Completed') DEFAULT 'In Progress',
+                updated_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                score INT DEFAULT 0,
+                max_score INT DEFAULT 2,
+                UNIQUE KEY uq_visual_attempt (attempt_id),
+                CONSTRAINT visual_progress_ibfk_1
+                    FOREIGN KEY (attempt_id) REFERENCES user_task_attempts(id) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+            """
+        )
+        cursor.execute("SHOW COLUMNS FROM visual_progress")
+        existing_columns = {row[0] for row in cursor.fetchall()}
+        if 'updated_at' not in existing_columns:
+            cursor.execute(
+                "ALTER TABLE visual_progress "
+                "ADD COLUMN updated_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP "
+                "ON UPDATE CURRENT_TIMESTAMP"
+            )
+        if 'score' not in existing_columns:
+            cursor.execute("ALTER TABLE visual_progress ADD COLUMN score INT DEFAULT 0")
+        if 'max_score' not in existing_columns:
+            cursor.execute("ALTER TABLE visual_progress ADD COLUMN max_score INT DEFAULT 2")
+        if 'status' in existing_columns:
+            cursor.execute(
+                "ALTER TABLE visual_progress "
+                "MODIFY COLUMN status ENUM('In Progress','Completed') DEFAULT 'In Progress'"
+            )
+        cursor.execute("SHOW INDEX FROM visual_progress WHERE Key_name = 'uq_visual_attempt'")
+        if not cursor.fetchone():
+            cursor.execute("ALTER TABLE visual_progress ADD UNIQUE KEY uq_visual_attempt (attempt_id)")
+        conn.commit()
+    except Exception as e:
+        print(f"Error ensuring visual_progress table: {e}")
+    finally:
+        try:
+            cursor.close()
+            conn.close()
+        except Exception:
+            pass
+
+def ensure_visual_tasks_table():
+    """Create visual_tasks if it doesn't exist."""
+    conn = connect_db()
+    if not conn:
+        return
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS visual_tasks (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                task_name VARCHAR(255) NOT NULL,
+                class_level INT NOT NULL,
+                difficulty_level ENUM('Easy','Medium','Hard') NOT NULL,
+                image_url VARCHAR(500) DEFAULT NULL,
+                question1 TEXT NOT NULL,
+                question2 TEXT NOT NULL,
+                question3 TEXT NOT NULL,
+                answer1_options JSON DEFAULT NULL,
+                answer2_options JSON DEFAULT NULL,
+                answer3_type ENUM('text','multiple_choice') DEFAULT 'text',
+                answer1 TEXT DEFAULT NULL,
+                answer2 TEXT DEFAULT NULL,
+                instructions TEXT,
+                estimated_time INT DEFAULT 5,
+                created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+                CONSTRAINT visual_tasks_chk_1 CHECK (class_level BETWEEN 1 AND 12)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+            """
+        )
+        conn.commit()
+    except Exception as e:
+        print(f"Error ensuring visual_tasks table: {e}")
+    finally:
+        try:
+            cursor.close()
+            conn.close()
+        except Exception:
+            pass
+
 def normalize_answer(value):
     return str(value).strip().lower() if value is not None else ''
 
@@ -483,6 +578,27 @@ def resolve_listening_audio_url(task):
             matches = glob.glob(os.path.join(audio_dir, f'class{class_level}_audio.*'))
             if matches:
                 return f"/static/audio_tasks/{os.path.basename(matches[0])}"
+    return None
+
+def resolve_visual_image_url(task):
+    """Resolve visual task image URL with DB value first and class-based static fallback."""
+    image_url = task.get('image_url') or task.get('visual_image_url')
+    if image_url:
+        image_url = str(image_url).strip()
+        if image_url.startswith('/static/'):
+            return image_url
+        if '/' not in image_url:
+            return f"/static/visual_tasks/{image_url}"
+        return f"/static/{image_url.lstrip('/')}"
+
+    class_level = task.get('class_level')
+    if class_level:
+        import glob
+        visual_dir = os.path.join(app.static_folder, 'visual_tasks')
+        if os.path.exists(visual_dir):
+            matches = glob.glob(os.path.join(visual_dir, f'class{class_level}_visual.*'))
+            if matches:
+                return f"/static/visual_tasks/{os.path.basename(matches[0])}"
     return None
 
 def connect_db():
@@ -572,6 +688,8 @@ ensure_suggested_tasks_table()
 ensure_video_recordings_table()
 ensure_listening_progress_table()
 ensure_listening_tasks_table()
+ensure_visual_progress_table()
+ensure_visual_tasks_table()
 
 UPLOAD_FOLDER = '/mnt/LS226/aditya_dyslexia_data/uploads'
 ALLOWED_EXTENSIONS = {'wav', 'webm', 'mp3', 'ogg', 'm4a', 'jpg', 'jpeg', 'png', 'gif', 'bmp', 'tiff', 'webp'}
@@ -2971,7 +3089,8 @@ def participant_dashboard():
                 'Mathematical Comprehension',
                 'Writing Task',
                 'Aptitude Test',
-                'Listening Task'
+                'Listening Task',
+                'Visual Task'
             ]
             
             # Determine allowed tasks based on class level from demographics
@@ -2991,12 +3110,13 @@ def participant_dashboard():
                     ('Mathematical Comprehension', 'mathematical_comprehension_tasks'),
                     ('Writing Task', 'writing_tasks'),
                     ('Aptitude Test', 'aptitude_tasks'),
-                    ('Listening Task', 'listening_tasks')
+                    ('Listening Task', 'listening_tasks'),
+                    ('Visual Task', 'visual_tasks')
                 ]
                 
                 for task_name, table_name in task_categories:
                     # Check if there are class-appropriate tasks for this category
-                    if task_name == 'Listening Task':
+                    if task_name in ('Listening Task', 'Visual Task'):
                         cursor.execute(
                             f"SELECT COUNT(*) as count FROM {table_name} "
                             "WHERE class_level = %s AND question1 IS NOT NULL AND question1 != ''",
@@ -3093,6 +3213,10 @@ def admin_tasks_by_category(category_slug: str):
         'aptitude': {
             'title': 'Aptitude Test',
             'table': 'aptitude_tasks'
+        },
+        'visual': {
+            'title': 'Visual Task',
+            'table': 'visual_tasks'
         }
     }
 
@@ -3912,17 +4036,18 @@ def api_allowed_tasks():
             # Check each task category for class-appropriate content
             task_categories = [
                 ('Reading Aloud Task 1', 'reading_tasks'),
-                ('Typing Task', 'typing_tasks'), 
+                ('Typing Task', 'typing_tasks'),
                 ('Reading Comprehension', 'reading_comprehension_tasks'),
                 ('Mathematical Comprehension', 'mathematical_comprehension_tasks'),
                 ('Writing Task', 'writing_tasks'),
                 ('Aptitude Test', 'aptitude_tasks'),
-                ('Listening Task', 'listening_tasks')
+                ('Listening Task', 'listening_tasks'),
+                ('Visual Task', 'visual_tasks')
             ]
             
             for task_name, table_name in task_categories:
                 # Check if there are class-appropriate tasks for this category
-                if task_name == 'Listening Task':
+                if task_name in ('Listening Task', 'Visual Task'):
                     cursor.execute(
                         f"SELECT COUNT(*) as count FROM {table_name} "
                         "WHERE class_level = %s AND question1 IS NOT NULL AND question1 != ''",
@@ -5494,10 +5619,9 @@ def submit_aptitude():
         # Calculate total score as sum of all section scores
         calculated_total_score = (
             logical_reasoning_score + numerical_ability_score +
-            verbal_ability_score + spatial_reasoning_score +
-            listening_task_score + visual_task_score
+            verbal_ability_score + spatial_reasoning_score
         )
-        max_score = int(data.get('max_score', 8) or 8)
+        max_score = int(data.get('max_score', 4) or 4)
         
         cursor.execute("""
             INSERT INTO aptitude_progress (
@@ -6743,7 +6867,7 @@ def start_listening_task():
         return jsonify({'success': False, 'message': 'User not logged in'}), 401
 
     data = request.get_json()
-    task_name = data.get('task_name', 'Listening Task')
+    task_name = 'Listening Task'
 
     try:
         conn = connect_db()
@@ -7089,6 +7213,448 @@ def retake_listening():
 # END LISTENING TASK ROUTES
 # ─────────────────────────────────────────────────────────────────────────────
 
+# ─────────────────────────────────────────────────────────────────────────────
+# VISUAL TASK ROUTES
+# ─────────────────────────────────────────────────────────────────────────────
+
+@app.route('/task_visual.html')
+def task_visual():
+    """Serves the Visual Task selector page"""
+    if 'user_id' not in session:
+        return redirect(url_for('signin'))
+    return render_template('task_visual.html', user_id=session['user_id'])
+
+@app.route('/task_visual_exec.html')
+def task_visual_exec():
+    """Serves the Visual Task execution page"""
+    if 'user_id' not in session:
+        return redirect(url_for('signin'))
+    return render_template('task_visual_exec.html', user_id=session['user_id'])
+
+@app.route('/api/visual-tasks/<int:user_id>', methods=['GET'])
+def get_visual_tasks(user_id):
+    """Get class-appropriate visual tasks for a user."""
+    try:
+        conn = connect_db()
+        if not conn:
+            return jsonify({'success': False, 'message': 'Database connection failed'}), 500
+
+        cursor = conn.cursor(dictionary=True)
+        class_level = _get_user_class_level(conn, user_id)
+
+        cursor.execute("SHOW TABLES LIKE 'visual_tasks'")
+        if not cursor.fetchone():
+            cursor.close(); conn.close()
+            return jsonify({'success': False, 'message': 'Visual tasks not configured. Please contact administrator.'}), 500
+
+        if class_level:
+            cursor.execute(
+                """
+                SELECT id, task_name, instructions, estimated_time, class_level, difficulty_level,
+                       image_url, question1, question2, question3,
+                       answer1_options, answer2_options, answer1, answer2, answer3_type
+                FROM visual_tasks
+                WHERE class_level = %s
+                ORDER BY difficulty_level, id
+                """,
+                (class_level,)
+            )
+        else:
+            cursor.execute(
+                """
+                SELECT id, task_name, instructions, estimated_time, class_level, difficulty_level,
+                       image_url, question1, question2, question3,
+                       answer1_options, answer2_options, answer1, answer2, answer3_type
+                FROM visual_tasks
+                ORDER BY class_level, difficulty_level, id
+                """
+            )
+
+        tasks = cursor.fetchall()
+        for task in tasks:
+            task['image_url'] = resolve_visual_image_url(task)
+        cursor.close(); conn.close()
+
+        if not tasks:
+            return jsonify({'success': False, 'message': 'No visual tasks found for your class. Please contact administrator.'}), 404
+
+        return jsonify({
+            'success': True,
+            'tasks': tasks,
+            'class_level': class_level or 'Not specified',
+            'total_tasks': len(tasks)
+        })
+    except Exception as e:
+        print(f"Get visual tasks error: {e}")
+        import traceback; traceback.print_exc()
+        return jsonify({'success': False, 'message': f'Failed to fetch visual tasks: {str(e)}'}), 500
+
+@app.route('/api/visual-task/<int:task_id>', methods=['GET'])
+def get_visual_task_by_id(task_id):
+    """Get a specific visual task by its visual_tasks ID."""
+    try:
+        conn = connect_db()
+        if not conn:
+            return jsonify({'success': False, 'message': 'Database connection failed'}), 500
+
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute(
+            """
+            SELECT id, task_name, instructions, estimated_time, class_level, difficulty_level,
+                   image_url, question1, question2, question3,
+                   answer1_options, answer2_options, answer1, answer2, answer3_type
+            FROM visual_tasks
+            WHERE id = %s
+            """,
+            (task_id,)
+        )
+        task = cursor.fetchone()
+        cursor.close(); conn.close()
+
+        if not task:
+            return jsonify({'success': False, 'message': 'Visual task not found'}), 404
+
+        task['image_url'] = resolve_visual_image_url(task)
+        return jsonify({'success': True, 'task': task})
+    except Exception as e:
+        print(f"Get visual task by ID error: {e}")
+        return jsonify({'success': False, 'message': f'Failed to fetch visual task: {str(e)}'}), 500
+
+@app.route('/api/start-visual-task', methods=['POST'])
+def start_visual_task():
+    """Mark the Visual Task as In Progress"""
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'message': 'User not logged in'}), 401
+
+    data = request.get_json()
+    task_name = 'Visual Task'
+
+    try:
+        conn = connect_db()
+        cursor = conn.cursor()
+        cursor.execute("SELECT id FROM tasks WHERE task_name = %s", ('Visual Task',))
+        task_row = cursor.fetchone()
+        if not task_row:
+            return jsonify({'success': False, 'message': 'Visual Task not found in tasks table'}), 404
+        generic_task_id = task_row[0]
+
+        cursor.execute("""
+            SELECT id, attempt_number FROM user_task_attempts
+            WHERE user_id = %s AND task_id = %s AND status = 'In Progress'
+            ORDER BY attempt_number DESC LIMIT 1
+        """, (session['user_id'], generic_task_id))
+        attempt_row = cursor.fetchone()
+
+        if attempt_row:
+            attempt_id, attempt_number = attempt_row
+        else:
+            cursor.execute("""
+                SELECT COALESCE(MAX(attempt_number), 0) + 1
+                FROM user_task_attempts
+                WHERE user_id = %s AND task_id = %s
+            """, (session['user_id'], generic_task_id))
+            attempt_number = cursor.fetchone()[0]
+
+            cursor.execute("""
+                INSERT INTO user_task_attempts (user_id, task_id, attempt_number, status, started_at)
+                VALUES (%s, %s, %s, 'In Progress', NOW())
+            """, (session['user_id'], generic_task_id, attempt_number))
+            attempt_id = cursor.lastrowid
+
+        cursor.execute(
+            '''INSERT INTO user_tasks (user_id, task_name, status)
+               VALUES (%s, %s, 'In Progress')
+               ON DUPLICATE KEY UPDATE status = IF(status='Completed', status, 'In Progress'),
+                                       updated_at = CURRENT_TIMESTAMP''',
+            (session['user_id'], task_name)
+        )
+
+        conn.commit()
+        cursor.close(); conn.close()
+
+        return jsonify({
+            'success': True,
+            'message': 'Visual task started',
+            'attempt_id': attempt_id,
+            'attempt_number': attempt_number
+        })
+    except Exception as e:
+        print(f"Start visual task error: {e}")
+        return jsonify({'success': False, 'message': 'Failed to start task'}), 500
+
+@app.route('/api/save-visual-progress', methods=['POST'])
+def save_visual_progress():
+    """Save in-progress answers for the Visual Task"""
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'message': 'User not logged in'}), 401
+
+    data = request.get_json()
+    q1 = data.get('q1', '')
+    q2 = data.get('q2', '')
+    q3 = data.get('q3', '')
+    task_name = data.get('task_name', 'Visual Task')
+
+    try:
+        conn = connect_db()
+        cursor = conn.cursor()
+        cursor.execute("SELECT id FROM tasks WHERE task_name = %s", (task_name,))
+        task_row = cursor.fetchone()
+        if not task_row:
+            return jsonify({'success': False, 'message': 'Task not found'}), 404
+        task_db_id = task_row[0]
+
+        cursor.execute("""
+            SELECT id, attempt_number FROM user_task_attempts
+            WHERE user_id = %s AND task_id = %s AND status = 'In Progress'
+            ORDER BY attempt_number DESC LIMIT 1
+        """, (session['user_id'], task_db_id))
+        attempt_row = cursor.fetchone()
+
+        if attempt_row:
+            attempt_id = attempt_row[0]
+        else:
+            cursor.execute("""
+                SELECT COALESCE(MAX(attempt_number), 0) + 1
+                FROM user_task_attempts
+                WHERE user_id = %s AND task_id = %s
+            """, (session['user_id'], task_db_id))
+            attempt_number = cursor.fetchone()[0]
+            cursor.execute("""
+                INSERT INTO user_task_attempts (user_id, task_id, attempt_number, status, started_at)
+                VALUES (%s, %s, %s, 'In Progress', NOW())
+            """, (session['user_id'], task_db_id, attempt_number))
+            attempt_id = cursor.lastrowid
+
+        cursor.execute(
+            """INSERT INTO visual_progress (attempt_id, q1, q2, q3, status, updated_at)
+               VALUES (%s, %s, %s, %s, 'In Progress', NOW())
+               ON DUPLICATE KEY UPDATE q1=VALUES(q1), q2=VALUES(q2), q3=VALUES(q3),
+                                       status='In Progress', updated_at=NOW()""",
+            (attempt_id, q1, q2, q3)
+        )
+
+        cursor.execute(
+            '''INSERT INTO user_tasks (user_id, task_name, status)
+               VALUES (%s, %s, 'In Progress')
+               ON DUPLICATE KEY UPDATE status = IF(status='Completed', status, 'In Progress'),
+                                       updated_at = CURRENT_TIMESTAMP''',
+            (session['user_id'], task_name)
+        )
+
+        conn.commit()
+        cursor.close(); conn.close()
+        return jsonify({'success': True, 'message': 'Progress saved successfully', 'attempt_id': attempt_id})
+    except Exception as e:
+        print(f"Save visual progress error: {e}")
+        return jsonify({'success': False, 'message': f'Failed to save progress: {str(e)}'}), 500
+
+@app.route('/api/get-visual-progress', methods=['GET'])
+def get_visual_progress():
+    """Retrieve saved visual progress for the current user"""
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'message': 'User not logged in'}), 401
+
+    task_name = request.args.get('task_name', 'Visual Task')
+
+    try:
+        conn = connect_db()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT id FROM tasks WHERE task_name = %s", (task_name,))
+        task_row = cursor.fetchone()
+        if not task_row:
+            return jsonify({'success': False, 'message': 'Task not found'}), 404
+        task_id = task_row['id']
+
+        cursor.execute(
+            """SELECT
+                   uta.id AS attempt_id,
+                   uta.attempt_number,
+                   uta.status AS attempt_status,
+                   uta.started_at,
+                   uta.completed_at,
+                   vp.q1, vp.q2, vp.q3, vp.status AS progress_status, vp.updated_at
+               FROM user_task_attempts uta
+               LEFT JOIN visual_progress vp ON vp.attempt_id = uta.id
+               WHERE uta.user_id = %s AND uta.task_id = %s AND uta.status = 'In Progress'
+               ORDER BY vp.updated_at DESC, uta.started_at DESC
+               LIMIT 1""",
+            (session['user_id'], task_id)
+        )
+        progress = cursor.fetchone()
+        cursor.close(); conn.close()
+
+        if progress:
+            return jsonify({
+                'success': True,
+                'progress': {
+                    'q1': progress.get('q1', ''),
+                    'q2': progress.get('q2', ''),
+                    'q3': progress.get('q3', ''),
+                    'status': progress.get('progress_status', 'In Progress'),
+                    'attempt_id': progress.get('attempt_id'),
+                    'attempt_number': progress.get('attempt_number'),
+                    'updated_at': progress.get('updated_at')
+                }
+            })
+        return jsonify({'success': True, 'progress': None})
+    except Exception as e:
+        print(f"Get visual progress error: {e}")
+        return jsonify({'success': False, 'message': f'Failed to get progress: {str(e)}'}), 500
+
+@app.route('/api/submit-visual', methods=['POST'])
+def submit_visual():
+    """Submit the Visual Task answers and score them"""
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'message': 'User not logged in'}), 401
+
+    data = request.get_json()
+    q1 = data.get('q1', '')
+    q2 = data.get('q2', '')
+    q3 = data.get('q3', '')
+    task_id = data.get('task_id')
+    task_name = data.get('task_name', 'Visual Task')
+
+    try:
+        conn = connect_db()
+        cursor = conn.cursor(dictionary=True)
+        score = 0
+        max_score = 2
+
+        if task_id:
+            cursor.execute(
+                "SELECT id, answer1, answer2, answer1_options, answer2_options FROM visual_tasks WHERE id = %s",
+                (task_id,)
+            )
+            task_row = cursor.fetchone()
+            if task_row:
+                if is_mcq_answer_correct(q1, task_row.get('answer1'), task_row.get('answer1_options')):
+                    score += 1
+                if is_mcq_answer_correct(q2, task_row.get('answer2'), task_row.get('answer2_options')):
+                    score += 1
+
+        cursor.execute("SELECT id FROM tasks WHERE task_name = 'Visual Task'")
+        tasks_row = cursor.fetchone()
+
+        if tasks_row:
+            task_db_id = tasks_row['id']
+            cursor.execute(
+                """SELECT id, attempt_number FROM user_task_attempts
+                   WHERE user_id = %s AND task_id = %s AND status = 'In Progress'
+                   ORDER BY attempt_number DESC LIMIT 1""",
+                (session['user_id'], task_db_id)
+            )
+            attempt_row = cursor.fetchone()
+
+            if attempt_row:
+                attempt_id = attempt_row['id']
+                attempt_number = attempt_row['attempt_number']
+            else:
+                cursor.execute(
+                    """SELECT COALESCE(MAX(attempt_number), 0) + 1 AS next_attempt
+                       FROM user_task_attempts WHERE user_id = %s AND task_id = %s""",
+                    (session['user_id'], task_db_id)
+                )
+                attempt_number = cursor.fetchone()['next_attempt']
+                cursor.execute(
+                    """INSERT INTO user_task_attempts (user_id, task_id, attempt_number, status, started_at)
+                       VALUES (%s, %s, %s, 'In Progress', NOW())""",
+                    (session['user_id'], task_db_id, attempt_number)
+                )
+                attempt_id = cursor.lastrowid
+
+            cursor.execute(
+                "UPDATE user_task_attempts SET status='Completed', completed_at=NOW() WHERE id=%s",
+                (attempt_id,)
+            )
+
+            cursor.execute(
+                """INSERT INTO visual_progress (attempt_id, q1, q2, q3, score, max_score, status, updated_at)
+                   VALUES (%s, %s, %s, %s, %s, %s, 'Completed', NOW())
+                   ON DUPLICATE KEY UPDATE q1=VALUES(q1), q2=VALUES(q2), q3=VALUES(q3),
+                                           score=VALUES(score), max_score=VALUES(max_score),
+                                           status='Completed', updated_at=NOW()""",
+                (attempt_id, q1, q2, q3, score, max_score)
+            )
+        else:
+            attempt_number = None
+
+        cursor.execute(
+            '''INSERT INTO user_tasks (user_id, task_name, status)
+               VALUES (%s, %s, 'Completed')
+               ON DUPLICATE KEY UPDATE status='Completed', updated_at=CURRENT_TIMESTAMP''',
+            (session['user_id'], task_name)
+        )
+
+        conn.commit()
+        cursor.close(); conn.close()
+
+        return jsonify({
+            'success': True,
+            'message': 'Visual task submitted successfully',
+            'score': score,
+            'max_score': max_score,
+            'attempt_number': attempt_number
+        })
+    except Exception as e:
+        print(f"Submit visual task error: {e}")
+        return jsonify({'success': False, 'message': f'Failed to submit: {str(e)}'}), 500
+
+@app.route('/api/retake-visual', methods=['POST'])
+def retake_visual():
+    """Create a new attempt for the Visual Task retake"""
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'message': 'User not logged in'}), 401
+
+    data = request.get_json()
+    task_name = data.get('task_name', 'Visual Task')
+
+    try:
+        conn = connect_db()
+        cursor = conn.cursor()
+        cursor.execute("SELECT id FROM tasks WHERE task_name = %s", (task_name,))
+        task_row = cursor.fetchone()
+        if not task_row:
+            return jsonify({'success': False, 'message': 'Task not found'}), 404
+
+        task_id = task_row[0]
+        cursor.execute(
+            """SELECT COALESCE(MAX(attempt_number), 0) + 1
+               FROM user_task_attempts
+               WHERE user_id = %s AND task_id = %s""",
+            (session['user_id'], task_id)
+        )
+        attempt_number = cursor.fetchone()[0]
+        cursor.execute(
+            """INSERT INTO user_task_attempts (user_id, task_id, attempt_number, status, started_at)
+               VALUES (%s, %s, %s, 'In Progress', NOW())""",
+            (session['user_id'], task_id, attempt_number)
+        )
+        attempt_id = cursor.lastrowid
+
+        cursor.execute(
+            '''INSERT INTO user_tasks (user_id, task_name, status)
+               VALUES (%s, %s, 'In Progress')
+               ON DUPLICATE KEY UPDATE status='In Progress', updated_at=CURRENT_TIMESTAMP''',
+            (session['user_id'], task_name)
+        )
+
+        conn.commit()
+        cursor.close(); conn.close()
+
+        return jsonify({
+            'success': True,
+            'message': 'New attempt created successfully',
+            'attempt_id': attempt_id,
+            'attempt_number': attempt_number
+        })
+    except Exception as e:
+        print(f"Retake visual task error: {e}")
+        return jsonify({'success': False, 'message': f'Error: {str(e)}'}), 500
+
+# ─────────────────────────────────────────────────────────────────────────────
+# END VISUAL TASK ROUTES
+# ─────────────────────────────────────────────────────────────────────────────
+
 @app.route('/api/upload-writing', methods=['POST'])
 def upload_writing():
     """Upload writing sample image"""
@@ -7416,7 +7982,7 @@ def admin_users_list():
         ''')
         users = cursor.fetchall()
         # Define the set of all tasks
-        all_tasks = ['Reading Aloud Task 1', 'Typing Task', 'Reading Comprehension', 'Mathematical Comprehension', 'Writing Task', 'Aptitude Test', 'Listening Task']
+        all_tasks = ['Reading Aloud Task 1', 'Typing Task', 'Reading Comprehension', 'Mathematical Comprehension', 'Writing Task', 'Aptitude Test', 'Listening Task', 'Visual Task']
         total_tasks = len(all_tasks)
         for user in users:
             # Get completed tasks for this user (only those in all_tasks)
@@ -7578,7 +8144,7 @@ def admin_users_grouped():
         schools = cursor.fetchall()
 
         # Compute progress for parents and children
-        all_tasks = ['Reading Aloud Task 1', 'Typing Task', 'Reading Comprehension', 'Mathematical Comprehension', 'Writing Task', 'Aptitude Test', 'Listening Task']
+        all_tasks = ['Reading Aloud Task 1', 'Typing Task', 'Reading Comprehension', 'Mathematical Comprehension', 'Writing Task', 'Aptitude Test', 'Listening Task', 'Visual Task']
         total_tasks = len(all_tasks)
         def attach_progress(users):
             for u in users:
@@ -7605,7 +8171,7 @@ def admin_users_grouped():
             ''', (s['id'],))
             s['num_children'] = cursor.fetchone()['c']
 
-            core_tasks = ['Reading Aloud Task 1', 'Typing Task', 'Reading Comprehension', 'Mathematical Comprehension', 'Writing Task', 'Aptitude Test', 'Listening Task']
+            core_tasks = ['Reading Aloud Task 1', 'Typing Task', 'Reading Comprehension', 'Mathematical Comprehension', 'Writing Task', 'Aptitude Test', 'Listening Task', 'Visual Task']
             cursor.execute('''
                 SELECT u.id
                 FROM users u
@@ -9121,8 +9687,9 @@ def get_student_scores(user_id):
             'scores': {
                 'reading_comprehension': {'score': 0, 'max_score': 2, 'attempts': 0, 'latest_score': 0},
                 'mathematical_comprehension': {'score': 0, 'max_score': 3, 'attempts': 0, 'latest_score': 0},
-                'aptitude': {'score': 0, 'max_score': 8, 'attempts': 0, 'latest_score': 0},
-                'listening': {'score': 0, 'max_score': 2, 'attempts': 0, 'latest_score': 0}
+                'aptitude': {'score': 0, 'max_score': 4, 'attempts': 0, 'latest_score': 0},
+                'listening': {'score': 0, 'max_score': 2, 'attempts': 0, 'latest_score': 0},
+                'visual': {'score': 0, 'max_score': 2, 'attempts': 0, 'latest_score': 0}
             },
             'reading_stats': None
         }
@@ -9227,8 +9794,21 @@ def get_student_scores(user_id):
                 JOIN users u ON uta.user_id = u.id
                 JOIN demographics d ON u.id = d.user_id
                 WHERE uta.status = 'Completed' AND d.education_level = %s
+
+                UNION ALL
+
+                SELECT
+                    'Visual Task' as task_name,
+                    AVG(vp.score) as avg_score,
+                    MAX(vp.max_score) as max_score,
+                    COUNT(DISTINCT uta.user_id) as student_count
+                FROM user_task_attempts uta
+                JOIN visual_progress vp ON vp.attempt_id = uta.id
+                JOIN users u ON uta.user_id = u.id
+                JOIN demographics d ON u.id = d.user_id
+                WHERE uta.status = 'Completed' AND d.education_level = %s
             """
-            cursor.execute(class_avg_query, (class_level, class_level, class_level, class_level))
+            cursor.execute(class_avg_query, (class_level, class_level, class_level, class_level, class_level))
             class_results = cursor.fetchall()
             for result in class_results:
                 stats['class_averages'][result['task_name']] = {
@@ -9367,10 +9947,30 @@ def get_student_scores(user_id):
             FROM user_task_attempts uta
             JOIN listening_progress lp ON lp.attempt_id = uta.id
             WHERE uta.user_id = %s AND uta.status = 'Completed'
+
+            UNION ALL
+
+            SELECT
+                'Visual Task' as task_name,
+                MAX(vp.score) as best_score,
+                MAX(vp.max_score) as max_score,
+                COUNT(*) as attempts,
+                (SELECT vp2.score FROM visual_progress vp2
+                 JOIN user_task_attempts uta2 ON vp2.attempt_id = uta2.id
+                 WHERE uta2.user_id = %s AND uta2.status = 'Completed'
+                 ORDER BY uta2.completed_at DESC LIMIT 1) as latest_score,
+                (SELECT vp3.score FROM visual_progress vp3
+                 JOIN user_task_attempts uta3 ON vp3.attempt_id = uta3.id
+                 WHERE uta3.user_id = %s AND uta3.status = 'Completed'
+                 ORDER BY uta3.completed_at ASC LIMIT 1) as first_score
+            FROM user_task_attempts uta
+            JOIN visual_progress vp ON vp.attempt_id = uta.id
+            WHERE uta.user_id = %s AND uta.status = 'Completed'
         """
         cursor.execute(
             personal_best_query,
             (
+                user_id, user_id, user_id,
                 user_id, user_id, user_id,
                 user_id, user_id, user_id,
                 user_id, user_id, user_id,
@@ -9412,7 +10012,7 @@ def get_student_scores(user_id):
             badges.append({'name': 'First Steps', 'icon': '🎯', 'description': 'Completed your first task'})
         if completed_tasks >= 3:
             badges.append({'name': 'Getting Started', 'icon': '🚀', 'description': 'Completed 3 tasks'})
-        if completed_tasks >= 7:
+        if completed_tasks >= 8:
             badges.append({'name': 'Task Master', 'icon': '🏆', 'description': 'Completed all tasks'})
         
         # Performance badges
@@ -9502,6 +10102,23 @@ def get_student_scores(user_id):
             stats['scores']['listening']['max_score'] = listening_scores[0]['max_score']
             total_score = sum(score['score'] for score in listening_scores)
             stats['scores']['listening']['score'] = round(total_score / len(listening_scores), 2)
+
+        # Visual scores
+        cursor.execute("""
+            SELECT vp.score, vp.max_score, vp.updated_at
+            FROM visual_progress vp
+            JOIN user_task_attempts uta ON vp.attempt_id = uta.id
+            WHERE uta.user_id = %s AND vp.status = 'Completed'
+            ORDER BY vp.updated_at DESC
+        """, (user_id,))
+
+        visual_scores = cursor.fetchall()
+        if visual_scores:
+            stats['scores']['visual']['attempts'] = len(visual_scores)
+            stats['scores']['visual']['latest_score'] = visual_scores[0]['score']
+            stats['scores']['visual']['max_score'] = visual_scores[0]['max_score']
+            total_score = sum(score['score'] for score in visual_scores)
+            stats['scores']['visual']['score'] = round(total_score / len(visual_scores), 2)
         
         cursor.close()
         conn.close()
@@ -9556,7 +10173,7 @@ def check_new_badges():
                 session['badge_getting_started'] = True
                 print("Badge: Getting Started earned")
         
-        if completed_tasks >= 7:
+        if completed_tasks >= 8:
             if not session.get('badge_task_master', False):
                 new_badges.append({'name': 'Task Master', 'icon': '🏆', 'description': 'Completed all tasks'})
                 session['badge_task_master'] = True
@@ -9567,7 +10184,8 @@ def check_new_badges():
             ('Reading Comprehension', 'comprehension_progress', 'score', 'max_score'),
             ('Mathematical Comprehension', 'mathematical_comprehension_progress', 'score', 'max_score'),
             ('Aptitude Test', 'aptitude_progress', 'total_score', 'max_score'),
-            ('Listening Task', 'listening_progress', 'score', 'max_score')
+            ('Listening Task', 'listening_progress', 'score', 'max_score'),
+            ('Visual Task', 'visual_progress', 'score', 'max_score')
         ]
         
         for task_name, table_name, score_col, max_score_col in task_configs:
