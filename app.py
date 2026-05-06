@@ -207,6 +207,69 @@ DB_CONFIG = {
     "port": int(os.getenv("MYSQLPORT", 3306))
 }
 
+VISIBLE_CORE_TASKS = [
+    'Reading Aloud Task 1',
+    'Typing Task',
+    'Reading Comprehension',
+    'Writing Task',
+    'Aptitude Test',
+    'Listening Task',
+    'Visual Task'
+]
+
+
+def get_visible_task_names(cursor):
+    placeholders = ', '.join(['%s'] * len(VISIBLE_CORE_TASKS))
+    cursor.execute(
+        f"SELECT task_name FROM tasks WHERE task_name IN ({placeholders})",
+        tuple(VISIBLE_CORE_TASKS)
+    )
+    existing_tasks = {row[0] if not isinstance(row, dict) else row['task_name'] for row in cursor.fetchall()}
+    return [task_name for task_name in VISIBLE_CORE_TASKS if task_name in existing_tasks]
+
+
+def fetch_admin_task_completion_stats(cursor):
+    visible_tasks = get_visible_task_names(cursor)
+    if not visible_tasks:
+        return []
+
+    cursor.execute("SELECT COUNT(*) AS total FROM users WHERE user_type = 'child'")
+    total_children = cursor.fetchone()['total']
+
+    placeholders = ', '.join(['%s'] * len(visible_tasks))
+    cursor.execute(
+        f"""
+        SELECT
+            t.task_name,
+            COUNT(DISTINCT CASE WHEN u.user_type = 'child' AND ut.status = 'Completed' THEN ut.user_id END) AS completed_count,
+            COUNT(DISTINCT CASE WHEN u.user_type = 'child' AND ut.status = 'In Progress' THEN ut.user_id END) AS in_progress_count
+        FROM tasks t
+        LEFT JOIN user_tasks ut ON t.task_name = ut.task_name
+        LEFT JOIN users u ON ut.user_id = u.id
+        WHERE t.task_name IN ({placeholders})
+        GROUP BY t.task_name
+        """,
+        tuple(visible_tasks)
+    )
+
+    rows_by_name = {row['task_name']: row for row in cursor.fetchall()}
+    stats = []
+    for task_name in visible_tasks:
+        row = rows_by_name.get(task_name, {})
+        completed_count = int(row.get('completed_count') or 0)
+        in_progress_count = int(row.get('in_progress_count') or 0)
+        not_started_count = max(total_children - completed_count - in_progress_count, 0)
+        completion_rate = round((completed_count * 100.0 / total_children), 2) if total_children else 0.0
+        stats.append({
+            'task_name': task_name,
+            'total_attempts': completed_count + in_progress_count,
+            'completed_count': completed_count,
+            'in_progress_count': in_progress_count,
+            'not_started_count': not_started_count,
+            'completion_rate': completion_rate
+        })
+    return stats
+
 
 
 def calculate_typing_metrics(text, keystrokes_data, reference_text=None):
@@ -3212,6 +3275,10 @@ def admin_tasks_by_category(category_slug: str):
             'title': 'Aptitude Test',
             'table': 'aptitude_tasks'
         },
+        'listening': {
+            'title': 'Listening Task',
+            'table': 'listening_tasks'
+        },
         'visual': {
             'title': 'Visual Task',
             'table': 'visual_tasks'
@@ -3366,6 +3433,28 @@ def admin_tasks_by_category(category_slug: str):
                     set_pair('numerical', na)
                     set_pair('verbal', va)
                     set_pair('spatial', sr)
+            elif category_slug == 'listening':
+                task_common['audio_url'] = row.get('audio_url')
+                task_common['question1'] = row.get('question1')
+                task_common['question2'] = row.get('question2')
+                task_common['question3'] = row.get('question3')
+                task_common['instructions'] = row.get('instructions')
+                a1 = parse_json_options(row.get('answer1_options'))
+                a2 = parse_json_options(row.get('answer2_options'))
+                task_common['answer1_options'] = a1
+                task_common['answer2_options'] = a2
+                task_common['answer3_type'] = row.get('answer3_type')
+            elif category_slug == 'visual':
+                task_common['image_url'] = row.get('image_url')
+                task_common['question1'] = row.get('question1')
+                task_common['question2'] = row.get('question2')
+                task_common['question3'] = row.get('question3')
+                task_common['instructions'] = row.get('instructions')
+                a1 = parse_json_options(row.get('answer1_options'))
+                a2 = parse_json_options(row.get('answer2_options'))
+                task_common['answer1_options'] = a1
+                task_common['answer2_options'] = a2
+                task_common['answer3_type'] = row.get('answer3_type')
             groups[key]['tasks'].append(task_common)
 
         # Sort groups by class_level
@@ -3391,7 +3480,9 @@ def _category_config(category_slug: str):
         'writing': {'table': 'writing_tasks'},
         'reading-comprehension': {'table': 'reading_comprehension_tasks'},
         'mathematical-comprehension': {'table': 'mathematical_comprehension_tasks'},
-        'aptitude': {'table': 'aptitude_tasks'}
+        'aptitude': {'table': 'aptitude_tasks'},
+        'listening': {'table': 'listening_tasks'},
+        'visual': {'table': 'visual_tasks'}
     }.get(category_slug)
 
 
@@ -3562,6 +3653,44 @@ def admin_category_tasks(category_slug: str):
                         data.get('visual_q2'), _json.dumps(data.get('visual_q2_options') or []), data.get('visual_q2_answer'), data.get('visual_q3'), data.get('visual_q3_answer')
                         )
                     )
+            elif category_slug == 'listening':
+                import json as _json
+                cursor.execute(
+                    """
+                    INSERT INTO listening_tasks (
+                        task_name, class_level, difficulty_level, audio_url,
+                        question1, question2, question3, answer1_options, answer2_options,
+                        answer3_type, answer1, answer2, instructions, estimated_time
+                    )
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    """,
+                    (
+                        data.get('task_name'), data.get('class_level'), data.get('difficulty_level'),
+                        data.get('audio_url'), data.get('question1'), data.get('question2'), data.get('question3'),
+                        _json.dumps(data.get('answer1_options') or []), _json.dumps(data.get('answer2_options') or []),
+                        data.get('answer3_type', 'text'), data.get('answer1'), data.get('answer2'),
+                        data.get('instructions'), data.get('estimated_time')
+                    )
+                )
+            elif category_slug == 'visual':
+                import json as _json
+                cursor.execute(
+                    """
+                    INSERT INTO visual_tasks (
+                        task_name, class_level, difficulty_level, image_url,
+                        question1, question2, question3, answer1_options, answer2_options,
+                        answer3_type, answer1, answer2, instructions, estimated_time
+                    )
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    """,
+                    (
+                        data.get('task_name'), data.get('class_level'), data.get('difficulty_level'),
+                        data.get('image_url'), data.get('question1'), data.get('question2'), data.get('question3'),
+                        _json.dumps(data.get('answer1_options') or []), _json.dumps(data.get('answer2_options') or []),
+                        data.get('answer3_type', 'text'), data.get('answer1'), data.get('answer2'),
+                        data.get('instructions'), data.get('estimated_time')
+                    )
+                )
             conn.commit()
             return jsonify({'success': True})
     except Exception as e:
@@ -3772,6 +3901,64 @@ def admin_category_task_detail(category_slug: str, task_id: int):
                             task_id
                         )
                     )
+            elif category_slug == 'listening':
+                import json as _json
+                cursor.execute(
+                    """
+                    UPDATE listening_tasks SET
+                        task_name=%s, class_level=%s, difficulty_level=%s, audio_url=%s,
+                        question1=%s, question2=%s, question3=%s,
+                        answer1_options=%s, answer2_options=%s, answer3_type=%s,
+                        answer1=%s, answer2=%s, instructions=%s, estimated_time=%s
+                    WHERE id=%s
+                    """,
+                    (
+                        data.get('task_name', existing.get('task_name')),
+                        data.get('class_level', existing.get('class_level')),
+                        data.get('difficulty_level', existing.get('difficulty_level')),
+                        data.get('audio_url', existing.get('audio_url')),
+                        data.get('question1', existing.get('question1')),
+                        data.get('question2', existing.get('question2')),
+                        data.get('question3', existing.get('question3')),
+                        _json.dumps(data.get('answer1_options', existing.get('answer1_options') or [])),
+                        _json.dumps(data.get('answer2_options', existing.get('answer2_options') or [])),
+                        data.get('answer3_type', existing.get('answer3_type')),
+                        data.get('answer1', existing.get('answer1')),
+                        data.get('answer2', existing.get('answer2')),
+                        data.get('instructions', existing.get('instructions')),
+                        data.get('estimated_time', existing.get('estimated_time')),
+                        task_id
+                    )
+                )
+            elif category_slug == 'visual':
+                import json as _json
+                cursor.execute(
+                    """
+                    UPDATE visual_tasks SET
+                        task_name=%s, class_level=%s, difficulty_level=%s, image_url=%s,
+                        question1=%s, question2=%s, question3=%s,
+                        answer1_options=%s, answer2_options=%s, answer3_type=%s,
+                        answer1=%s, answer2=%s, instructions=%s, estimated_time=%s
+                    WHERE id=%s
+                    """,
+                    (
+                        data.get('task_name', existing.get('task_name')),
+                        data.get('class_level', existing.get('class_level')),
+                        data.get('difficulty_level', existing.get('difficulty_level')),
+                        data.get('image_url', existing.get('image_url')),
+                        data.get('question1', existing.get('question1')),
+                        data.get('question2', existing.get('question2')),
+                        data.get('question3', existing.get('question3')),
+                        _json.dumps(data.get('answer1_options', existing.get('answer1_options') or [])),
+                        _json.dumps(data.get('answer2_options', existing.get('answer2_options') or [])),
+                        data.get('answer3_type', existing.get('answer3_type')),
+                        data.get('answer1', existing.get('answer1')),
+                        data.get('answer2', existing.get('answer2')),
+                        data.get('instructions', existing.get('instructions')),
+                        data.get('estimated_time', existing.get('estimated_time')),
+                        task_id
+                    )
+                )
             conn.commit()
             return jsonify({'success': True})
     except Exception as e:
@@ -3974,6 +4161,38 @@ def admin_export_tasks_csv():
                 row.get('difficulty_level', ''),
                 row.get('task_name', ''),
                 '',
+                q_details
+            ])
+
+        # 7. Listening Tasks
+        cursor.execute("SELECT * FROM listening_tasks ORDER BY class_level")
+        for row in cursor.fetchall():
+            q_details = (f"Audio: {row.get('audio_url', '')}\n"
+                         f"Q1: {row.get('question1', '')} (Options: {row.get('answer1_options', '')}, Ans: {row.get('answer1', '')})\n"
+                         f"Q2: {row.get('question2', '')} (Options: {row.get('answer2_options', '')}, Ans: {row.get('answer2', '')})\n"
+                         f"Q3: {row.get('question3', '')} (Type: {row.get('answer3_type', '')})")
+            cw.writerow([
+                'Listening Task',
+                row.get('class_level', ''),
+                row.get('difficulty_level', ''),
+                row.get('task_name', ''),
+                row.get('instructions', ''),
+                q_details
+            ])
+
+        # 8. Visual Tasks
+        cursor.execute("SELECT * FROM visual_tasks ORDER BY class_level")
+        for row in cursor.fetchall():
+            q_details = (f"Image: {row.get('image_url', '')}\n"
+                         f"Q1: {row.get('question1', '')} (Options: {row.get('answer1_options', '')}, Ans: {row.get('answer1', '')})\n"
+                         f"Q2: {row.get('question2', '')} (Options: {row.get('answer2_options', '')}, Ans: {row.get('answer2', '')})\n"
+                         f"Q3: {row.get('question3', '')} (Type: {row.get('answer3_type', '')})")
+            cw.writerow([
+                'Visual Task',
+                row.get('class_level', ''),
+                row.get('difficulty_level', ''),
+                row.get('task_name', ''),
+                row.get('instructions', ''),
                 q_details
             ])
 
@@ -8297,14 +8516,17 @@ def admin_dashboard_stats():
         total_participants = cursor.fetchone()['total']
         stats['totalParticipants'] = total_participants
 
-        # Average completion rate (average progress across all users)
-        cursor.execute('SELECT id FROM users')
+        # Average completion rate across the visible participant task set
+        cursor.execute("SELECT id FROM users WHERE user_type = 'child'")
         user_ids = [row['id'] for row in cursor.fetchall()]
         total_progress = 0
         for user_id in user_ids:
-            cursor.execute('SELECT COUNT(*) as total FROM user_tasks WHERE user_id = %s', (user_id,))
-            total_tasks = cursor.fetchone()['total']
-            cursor.execute("SELECT COUNT(*) as completed FROM user_tasks WHERE user_id = %s AND status = 'Completed'", (user_id,))
+            total_tasks = len(VISIBLE_CORE_TASKS)
+            placeholders = ', '.join(['%s'] * len(VISIBLE_CORE_TASKS))
+            cursor.execute(
+                f"SELECT COUNT(*) as completed FROM user_tasks WHERE user_id = %s AND status = 'Completed' AND task_name IN ({placeholders})",
+                tuple([user_id] + VISIBLE_CORE_TASKS)
+            )
             completed_tasks = cursor.fetchone()['completed']
             progress = int((completed_tasks / total_tasks) * 100) if total_tasks else 0
             total_progress += progress
@@ -8312,7 +8534,11 @@ def admin_dashboard_stats():
         stats['completionRate'] = avg_completion
 
         # Active studies (number of tasks)
-        cursor.execute('SELECT COUNT(*) AS numTasks FROM tasks')
+        placeholders = ', '.join(['%s'] * len(VISIBLE_CORE_TASKS))
+        cursor.execute(
+            f"SELECT COUNT(*) AS numTasks FROM tasks WHERE task_name IN ({placeholders})",
+            tuple(VISIBLE_CORE_TASKS)
+        )
         stats['activeStudies'] = cursor.fetchone()['numTasks']
 
         # Data quality calculation based on demographics completion
@@ -8352,9 +8578,7 @@ def admin_get_child_tasks():
         conn = connect_db()
         cursor = conn.cursor(dictionary=True)
         
-        # Get all available tasks
-        cursor.execute("SELECT task_name FROM tasks ORDER BY id")
-        all_tasks = [row['task_name'] for row in cursor.fetchall()]
+        all_tasks = get_visible_task_names(cursor)
         
         # Get current task statuses for this user
         cursor.execute("SELECT task_name, status FROM user_tasks WHERE user_id = %s", (user_id,))
@@ -9136,22 +9360,7 @@ def get_admin_comprehensive_stats():
         ''')
         school_stats = cursor.fetchall()
 
-        # Task completion statistics
-        cursor.execute('''
-            SELECT 
-                t.task_name,
-                COUNT(DISTINCT ut.user_id) as total_attempts,
-                COUNT(DISTINCT CASE WHEN ut.status = 'Completed' THEN ut.user_id END) as completed_count,
-                COUNT(DISTINCT CASE WHEN ut.status = 'In Progress' THEN ut.user_id END) as in_progress_count,
-                COUNT(DISTINCT CASE WHEN ut.status = 'Not Started' THEN ut.user_id END) as not_started_count,
-                ROUND(COUNT(DISTINCT CASE WHEN ut.status = 'Completed' THEN ut.user_id END) * 100.0 / COUNT(DISTINCT ut.user_id), 2) as completion_rate
-            FROM tasks t
-            LEFT JOIN user_tasks ut ON t.task_name = ut.task_name
-            LEFT JOIN users u ON ut.user_id = u.id AND u.user_type = 'child'
-            GROUP BY t.task_name
-            ORDER BY completion_rate DESC
-        ''')
-        task_completion_stats = cursor.fetchall()
+        task_completion_stats = fetch_admin_task_completion_stats(cursor)
 
         # Demographics breakdown
         cursor.execute('''
@@ -9231,6 +9440,371 @@ def get_admin_comprehensive_stats():
     except Exception as e:
         print(f"Error getting admin comprehensive stats: {e}")
         return jsonify({'success': False, 'message': 'Failed to load statistics'}), 500
+
+
+@app.route('/api/admin/task-stats', methods=['GET'])
+def admin_task_stats():
+    if not session.get('is_admin'):
+        return jsonify({'success': False, 'message': 'Unauthorized'}), 401
+
+    conn = connect_db()
+    if not conn:
+        return jsonify({'success': False, 'message': 'Database connection failed'}), 500
+
+    cursor = conn.cursor(dictionary=True)
+    try:
+        task_stats = fetch_admin_task_completion_stats(cursor)
+        return jsonify({
+            'success': True,
+            'labels': [row['task_name'] for row in task_stats],
+            'data': [row['completion_rate'] for row in task_stats],
+            'task_completion_stats': task_stats
+        })
+    except Exception as e:
+        print(f"Error getting admin task stats: {e}")
+        return jsonify({'success': False, 'message': 'Failed to load task stats'}), 500
+    finally:
+        cursor.close()
+        conn.close()
+
+
+@app.route('/api/admin/export-dataset', methods=['POST'])
+def admin_export_dataset():
+    if not session.get('is_admin'):
+        return jsonify({'success': False, 'message': 'Unauthorized'}), 401
+
+    data = request.get_json() or {}
+    export_format = (data.get('format') or 'csv').lower()
+    anonymization = (data.get('anonymization') or 'full').lower()
+    include_data = data.get('includeData') or {}
+    start_date = data.get('startDate')
+    end_date = data.get('endDate')
+
+    conn = connect_db()
+    if not conn:
+        return jsonify({'success': False, 'message': 'Database connection failed'}), 500
+
+    cursor = conn.cursor(dictionary=True)
+    try:
+        where_clauses = ["u.user_type = 'child'"]
+        params = []
+        if start_date:
+            where_clauses.append("DATE(u.created_at) >= %s")
+            params.append(start_date)
+        if end_date:
+            where_clauses.append("DATE(u.created_at) <= %s")
+            params.append(end_date)
+        where_sql = " AND ".join(where_clauses)
+
+        cursor.execute(
+            f"""
+            SELECT u.id, u.name, u.email, u.class, u.created_at
+            FROM users u
+            WHERE {where_sql}
+            ORDER BY u.id
+            """,
+            tuple(params)
+        )
+        users = cursor.fetchall()
+        user_ids = [row['id'] for row in users]
+
+        def mask_value(value, field_name):
+            if anonymization == 'none' or value in (None, ''):
+                return value
+            if field_name == 'email':
+                return f"user_{hash(str(value)) & 0xffff}"
+            if field_name in ('name', 'user_name'):
+                return f"Participant {hash(str(value)) & 0xffff}"
+            return value
+
+        payload = {
+            'generated_at': datetime.now().isoformat(),
+            'filters': {
+                'format': export_format,
+                'anonymization': anonymization,
+                'startDate': start_date,
+                'endDate': end_date
+            },
+            'users': [
+                {
+                    **row,
+                    'name': mask_value(row.get('name'), 'name'),
+                    'email': mask_value(row.get('email'), 'email')
+                }
+                for row in users
+            ]
+        }
+
+        if not user_ids:
+            if export_format == 'json':
+                response = make_response(json.dumps(payload, indent=2, default=str))
+                response.headers['Content-Type'] = 'application/json'
+                response.headers['Content-Disposition'] = 'attachment; filename=dyslexia_study_data.json'
+                return response
+            output = make_response("record_type\n")
+            output.headers["Content-Disposition"] = "attachment; filename=dyslexia_study_data.csv"
+            output.headers["Content-type"] = "text/csv"
+            return output
+
+        id_placeholders = ', '.join(['%s'] * len(user_ids))
+
+        if include_data.get('demographics'):
+            cursor.execute(
+                f"""
+                SELECT d.*, u.name AS user_name, u.email
+                FROM demographics d
+                JOIN users u ON u.id = d.user_id
+                WHERE d.user_id IN ({id_placeholders})
+                ORDER BY d.user_id
+                """,
+                tuple(user_ids)
+            )
+            payload['demographics'] = [
+                {
+                    **row,
+                    'user_name': mask_value(row.get('user_name'), 'user_name'),
+                    'email': mask_value(row.get('email'), 'email')
+                }
+                for row in cursor.fetchall()
+            ]
+
+        if include_data.get('progress'):
+            cursor.execute(
+                f"""
+                SELECT uta.id AS attempt_id, uta.user_id, u.name AS user_name, u.email, uta.task_id, uta.task_name,
+                       uta.started_at, uta.completed_at, uta.status, uta.score
+                FROM user_task_attempts uta
+                JOIN users u ON u.id = uta.user_id
+                WHERE uta.user_id IN ({id_placeholders})
+                ORDER BY uta.user_id, uta.started_at
+                """,
+                tuple(user_ids)
+            )
+            payload['task_attempts'] = [
+                {
+                    **row,
+                    'user_name': mask_value(row.get('user_name'), 'user_name'),
+                    'email': mask_value(row.get('email'), 'email')
+                }
+                for row in cursor.fetchall()
+            ]
+
+            cursor.execute(
+                f"""
+                SELECT ut.user_id, u.name AS user_name, u.email, ut.task_name, ut.status, ut.updated_at
+                FROM user_tasks ut
+                JOIN users u ON u.id = ut.user_id
+                WHERE ut.user_id IN ({id_placeholders}) AND ut.task_name IN ({', '.join(['%s'] * len(VISIBLE_CORE_TASKS))})
+                ORDER BY ut.user_id, ut.task_name
+                """,
+                tuple(user_ids + VISIBLE_CORE_TASKS)
+            )
+            payload['task_progress'] = [
+                {
+                    **row,
+                    'user_name': mask_value(row.get('user_name'), 'user_name'),
+                    'email': mask_value(row.get('email'), 'email')
+                }
+                for row in cursor.fetchall()
+            ]
+
+            progress_queries = {
+                'comprehension_progress': """
+                    SELECT 'Reading Comprehension' AS task_name, cp.attempt_id, cp.q1 AS response_1, cp.q2 AS response_2,
+                           cp.q3 AS response_3, cp.status, cp.score, cp.max_score, cp.updated_at
+                    FROM comprehension_progress cp
+                """,
+                'aptitude_progress': """
+                    SELECT 'Aptitude Test' AS task_name, ap.attempt_id, ap.logical_answer AS response_1, ap.numerical_answer AS response_2,
+                           CONCAT(ap.verbal_answer, ' | ', ap.spatial_answer) AS response_3, ap.status, ap.total_score AS score,
+                           ap.max_score, ap.updated_at
+                    FROM aptitude_progress ap
+                """,
+                'listening_progress': """
+                    SELECT 'Listening Task' AS task_name, lp.attempt_id, lp.q1 AS response_1, lp.q2 AS response_2,
+                           lp.q3 AS response_3, lp.status, lp.score, lp.max_score, lp.updated_at
+                    FROM listening_progress lp
+                """,
+                'visual_progress': """
+                    SELECT 'Visual Task' AS task_name, vp.attempt_id, vp.q1 AS response_1, vp.q2 AS response_2,
+                           vp.q3 AS response_3, vp.status, vp.score, vp.max_score, vp.updated_at
+                    FROM visual_progress vp
+                """
+            }
+            progress_rows = []
+            for record_type, base_query in progress_queries.items():
+                cursor.execute(
+                    f"""
+                    SELECT %s AS record_type, p.*, uta.user_id, u.name AS user_name, u.email
+                    FROM ({base_query}) p
+                    JOIN user_task_attempts uta ON uta.id = p.attempt_id
+                    JOIN users u ON u.id = uta.user_id
+                    WHERE uta.user_id IN ({id_placeholders})
+                    ORDER BY uta.user_id, p.updated_at
+                    """,
+                    tuple([record_type] + user_ids)
+                )
+                progress_rows.extend(cursor.fetchall())
+            payload['progress_records'] = [
+                {
+                    **row,
+                    'user_name': mask_value(row.get('user_name'), 'user_name'),
+                    'email': mask_value(row.get('email'), 'email')
+                }
+                for row in progress_rows
+            ]
+
+        if include_data.get('typing'):
+            cursor.execute(
+                f"""
+                SELECT tp.*, uta.user_id, u.name AS user_name, u.email
+                FROM typing_progress tp
+                JOIN user_task_attempts uta ON uta.id = tp.attempt_id
+                JOIN users u ON u.id = uta.user_id
+                WHERE uta.user_id IN ({id_placeholders})
+                ORDER BY uta.user_id, tp.updated_at
+                """,
+                tuple(user_ids)
+            )
+            payload['typing_data'] = [
+                {
+                    **row,
+                    'user_name': mask_value(row.get('user_name'), 'user_name'),
+                    'email': mask_value(row.get('email'), 'email')
+                }
+                for row in cursor.fetchall()
+            ]
+
+        if include_data.get('comprehension'):
+            comprehension_rows = []
+            for record_type, query in [
+                ('reading_comprehension', """
+                    SELECT cp.*, uta.user_id, u.name AS user_name, u.email
+                    FROM comprehension_progress cp
+                    JOIN user_task_attempts uta ON uta.id = cp.attempt_id
+                    JOIN users u ON u.id = uta.user_id
+                    WHERE uta.user_id IN ({ids})
+                """),
+                ('listening', """
+                    SELECT lp.*, uta.user_id, u.name AS user_name, u.email
+                    FROM listening_progress lp
+                    JOIN user_task_attempts uta ON uta.id = lp.attempt_id
+                    JOIN users u ON u.id = uta.user_id
+                    WHERE uta.user_id IN ({ids})
+                """),
+                ('visual', """
+                    SELECT vp.*, uta.user_id, u.name AS user_name, u.email
+                    FROM visual_progress vp
+                    JOIN user_task_attempts uta ON uta.id = vp.attempt_id
+                    JOIN users u ON u.id = uta.user_id
+                    WHERE uta.user_id IN ({ids})
+                """)
+            ]:
+                cursor.execute(
+                    query.format(ids=id_placeholders),
+                    tuple(user_ids)
+                )
+                for row in cursor.fetchall():
+                    row['record_type'] = record_type
+                    comprehension_rows.append({
+                        **row,
+                        'user_name': mask_value(row.get('user_name'), 'user_name'),
+                        'email': mask_value(row.get('email'), 'email')
+                    })
+            payload['comprehension_data'] = comprehension_rows
+
+        if include_data.get('audio'):
+            media_rows = []
+            cursor.execute(
+                f"""
+                SELECT 'audio' AS media_type, ar.attempt_id, ar.filename, ar.uploaded_at,
+                       uta.user_id, u.name AS user_name, u.email, uta.task_name
+                FROM audio_recordings ar
+                JOIN user_task_attempts uta ON uta.id = ar.attempt_id
+                JOIN users u ON u.id = uta.user_id
+                WHERE uta.user_id IN ({id_placeholders})
+                """,
+                tuple(user_ids)
+            )
+            media_rows.extend(cursor.fetchall())
+            cursor.execute(
+                f"""
+                SELECT 'video' AS media_type, vr.attempt_id, vr.filename, vr.uploaded_at,
+                       uta.user_id, u.name AS user_name, u.email, uta.task_name
+                FROM video_recordings vr
+                JOIN user_task_attempts uta ON uta.id = vr.attempt_id
+                JOIN users u ON u.id = uta.user_id
+                WHERE uta.user_id IN ({id_placeholders})
+                """,
+                tuple(user_ids)
+            )
+            media_rows.extend(cursor.fetchall())
+            payload['media'] = [
+                {
+                    **row,
+                    'user_name': mask_value(row.get('user_name'), 'user_name'),
+                    'email': mask_value(row.get('email'), 'email')
+                }
+                for row in media_rows
+            ]
+
+        cursor.execute(
+            f"""
+            SELECT tf.*, u.name AS user_name, u.email
+            FROM task_feedback tf
+            JOIN users u ON u.id = tf.user_id
+            WHERE tf.user_id IN ({id_placeholders}) AND tf.task_name IN ({', '.join(['%s'] * len(VISIBLE_CORE_TASKS))})
+            ORDER BY tf.user_id, tf.created_at
+            """,
+            tuple(user_ids + VISIBLE_CORE_TASKS)
+        )
+        payload['task_feedback'] = [
+            {
+                **row,
+                'user_name': mask_value(row.get('user_name'), 'user_name'),
+                'email': mask_value(row.get('email'), 'email')
+            }
+            for row in cursor.fetchall()
+        ]
+
+        if export_format == 'json':
+            response = make_response(json.dumps(payload, indent=2, default=str))
+            response.headers['Content-Type'] = 'application/json'
+            response.headers['Content-Disposition'] = 'attachment; filename=dyslexia_study_data.json'
+            return response
+
+        import csv
+        output_stream = io.StringIO()
+        writer = csv.writer(output_stream)
+        writer.writerow(['record_type', 'user_id', 'user_name', 'email', 'task_name', 'field_1', 'field_2', 'field_3', 'score', 'status', 'updated_at'])
+
+        for user in payload.get('users', []):
+            writer.writerow(['user', user.get('id'), user.get('name'), user.get('email'), '', user.get('class'), '', '', '', '', user.get('created_at')])
+        for row in payload.get('demographics', []):
+            writer.writerow(['demographics', row.get('user_id'), row.get('user_name'), row.get('email'), '', row.get('gender'), row.get('dyslexia_status'), row.get('education_level'), '', '', row.get('created_at')])
+        for row in payload.get('task_progress', []):
+            writer.writerow(['task_progress', row.get('user_id'), row.get('user_name'), row.get('email'), row.get('task_name'), '', '', '', '', row.get('status'), row.get('updated_at')])
+        for row in payload.get('progress_records', []):
+            writer.writerow([row.get('record_type'), row.get('user_id'), row.get('user_name'), row.get('email'), row.get('task_name'), row.get('response_1'), row.get('response_2'), row.get('response_3'), row.get('score'), row.get('status'), row.get('updated_at')])
+        for row in payload.get('typing_data', []):
+            writer.writerow(['typing_data', row.get('user_id'), row.get('user_name'), row.get('email'), 'Typing Task', row.get('text'), row.get('timer'), '', '', '', row.get('updated_at')])
+        for row in payload.get('comprehension_data', []):
+            writer.writerow([row.get('record_type'), row.get('user_id'), row.get('user_name'), row.get('email'), '', row.get('q1'), row.get('q2'), row.get('q3'), row.get('score'), row.get('status'), row.get('updated_at')])
+        for row in payload.get('media', []):
+            writer.writerow([row.get('media_type'), row.get('user_id'), row.get('user_name'), row.get('email'), row.get('task_name'), row.get('filename'), '', '', '', '', row.get('uploaded_at')])
+        for row in payload.get('task_feedback', []):
+            writer.writerow(['task_feedback', row.get('user_id'), row.get('user_name'), row.get('email'), row.get('task_name'), row.get('rating'), row.get('comments'), '', '', '', row.get('created_at')])
+
+        response = make_response(output_stream.getvalue())
+        response.headers["Content-Disposition"] = "attachment; filename=dyslexia_study_data.csv"
+        response.headers["Content-type"] = "text/csv"
+        return response
+    except Exception as e:
+        print(f"Error exporting admin dataset: {e}")
+        return jsonify({'success': False, 'message': 'Failed to export dataset'}), 500
+    finally:
+        cursor.close()
+        conn.close()
 
 @app.route('/api/statistics/child/<int:child_id>', methods=['GET'])
 def get_child_detailed_stats(child_id):
