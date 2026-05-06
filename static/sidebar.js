@@ -73,7 +73,6 @@ document.addEventListener('DOMContentLoaded', function () {
         loadSubtasks('reading', `/api/reading-tasks/${USER_ID}`);
         loadSubtasks('typing', `/api/typing-tasks/${USER_ID}`);
         loadSubtasks('comprehension', `/api/reading-comprehension-tasks/${USER_ID}`);
-        loadSubtasks('math', `/api/mathematical-comprehension-tasks/${USER_ID}`);
         loadSubtasks('listening', `/api/listening-tasks/${USER_ID}`);
         loadSubtasks('visual', `/api/visual-tasks/${USER_ID}`);
         loadSubtasks('writing', `/api/writing-tasks/${USER_ID}`);
@@ -143,8 +142,6 @@ async function loadSubtasks(category, apiUrl) {
                     href = `/task22.html?task_id=${task.id}`;
                 } else if (category === 'comprehension') {
                     href = `/task33.html?task_id=${task.id}`;
-                } else if (category === 'math') {
-                    href = `/task44.html?task_id=${task.id}`;
                 } else if (category === 'listening') {
                     href = `/task_listening_exec.html?task_id=${task.id}`;
                 } else if (category === 'visual') {

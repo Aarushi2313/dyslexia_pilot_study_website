@@ -734,12 +734,6 @@
                                     </h3>
                                     <p class="text-xs sm:text-sm text-gray-600 mt-1">View tasks grouped by age bands</p>
                                 </a>
-                                <a href="{{ url_for('admin_tasks_by_category', category_slug='mathematical-comprehension') }}"
-                                    class="block bg-white p-4 sm:p-5 md:p-6 rounded-lg shadow-md hover:shadow-lg border border-gray-200 transition">
-                                    <h3 class="text-base sm:text-lg font-semibold text-gray-800">Mathematical
-                                        Comprehension</h3>
-                                    <p class="text-xs sm:text-sm text-gray-600 mt-1">View tasks grouped by age bands</p>
-                                </a>
                                 <a href="{{ url_for('admin_tasks_by_category', category_slug='aptitude') }}"
                                     class="block bg-white p-4 sm:p-5 md:p-6 rounded-lg shadow-md hover:shadow-lg border border-gray-200 transition">
                                     <h3 class="text-lg font-semibold text-gray-800">Aptitude Test</h3>
@@ -1220,9 +1214,10 @@
 
         function displayTaskCompletionChart(taskStats) {
             const ctx = document.getElementById('taskCompletionChart').getContext('2d');
+            const visibleTaskStats = (taskStats || []).filter(task => task.task_name !== 'Mathematical Comprehension');
 
-            const labels = taskStats.map(task => task.task_name);
-            const completionRates = taskStats.map(task => task.completion_rate || 0);
+            const labels = visibleTaskStats.map(task => task.task_name);
+            const completionRates = visibleTaskStats.map(task => task.completion_rate || 0);
 
             new Chart(ctx, {
                 type: 'doughnut',
@@ -1809,8 +1804,11 @@
             try {
                 const resp = await fetch('/api/admin/task-stats');
                 const data = await resp.json();
-                const labels = (data.success && data.labels) ? data.labels : ['Reading Aloud', 'Typing Task', 'Comprehension'];
-                const values = (data.success && data.data) ? data.data : [75, 68, 82];
+                const rawLabels = (data.success && data.labels) ? data.labels : ['Reading Aloud', 'Typing Task', 'Comprehension'];
+                const rawValues = (data.success && data.data) ? data.data : [75, 68, 82];
+                const filteredEntries = rawLabels.map((label, index) => ({ label, value: rawValues[index] })).filter(entry => entry.label !== 'Mathematical Comprehension');
+                const labels = filteredEntries.map(entry => entry.label);
+                const values = filteredEntries.map(entry => entry.value);
                 new Chart(ctx, {
                     type: 'doughnut',
                     data: {
@@ -2308,11 +2306,12 @@ Example: ${task.example || 'N/A'}
 
         function displayTaskManagement(tasks, childId) {
             const container = document.getElementById('taskManagementContent');
+            const visibleTasks = (tasks || []).filter(task => task.task_name !== 'Mathematical Comprehension');
             container.innerHTML = `
                 <div class="space-y-4">
                     <p class="text-gray-600">Change the status of each task for this child participant:</p>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        ${tasks.map(task => `
+                        ${visibleTasks.map(task => `
                             <div class="border border-gray-200 rounded-lg p-4">
                                 <h4 class="font-semibold text-gray-800 mb-2">${task.task_name}</h4>
                                 <div class="flex items-center space-x-3">
@@ -2358,7 +2357,7 @@ Example: ${task.example || 'N/A'}
                     const child = groupedUsers.children.find(c => c.id == childId);
                     if (child) {
                         // Recalculate progress
-                        const allTasks = ['Reading Aloud Task 1', 'Typing Task', 'Reading Comprehension', 'Mathematical Comprehension', 'Writing Task', 'Aptitude Test', 'Listening Task']
+                        const allTasks = ['Reading Aloud Task 1', 'Typing Task', 'Reading Comprehension', 'Writing Task', 'Aptitude Test', 'Listening Task', 'Visual Task']
                         const completedTasks = allTasks.filter(task => {
                             if (task === taskName) {
                                 return newStatus === 'Completed';

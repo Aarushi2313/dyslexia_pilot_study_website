@@ -129,7 +129,6 @@
         if (taskName === 'Reading Aloud Task 1') return "{{ url_for('static', filename='read.png') }}";
         if (taskName === 'Typing Task') return "{{ url_for('static', filename='type.png') }}";
         if (taskName === 'Reading Comprehension') return "{{ url_for('static', filename='comprehend2.jpg') }}";
-        if (taskName === 'Mathematical Comprehension') return "{{ url_for('static', filename='math.jpg') }}";
         if (taskName === 'Writing Task') return "{{ url_for('static', filename='write.jpg') }}";
         if (taskName === 'Aptitude Test') return "{{ url_for('static', filename='aptitude.png') }}";
         if (taskName === 'Listening Task') return "{{ url_for('static', filename='listen.jpg') }}";
@@ -141,7 +140,7 @@
         const grid = document.getElementById('taskGrid');
         if (!grid) return;
         grid.innerHTML = '';
-        (tasks || []).forEach(task => {
+        (tasks || []).filter(task => task.task_name !== 'Mathematical Comprehension').forEach(task => {
             const card = document.createElement('div');
 
             // Common base classes with p-0 for edge-to-edge image
@@ -184,7 +183,6 @@
         if (taskName === 'Reading Aloud Task 1') return 'Read a short story out loud.';
         if (taskName === 'Typing Task') return 'Type a short essay on the topic.';
         if (taskName === 'Reading Comprehension') return 'Read a passage and answer questions.';
-        if (taskName === 'Mathematical Comprehension') return 'Solve math-based questions.';
         if (taskName === 'Writing Task') return 'Write a creative story or essay.';
         if (taskName === 'Aptitude Test') return 'Test your logical & verbal reasoning.';
         if (taskName === 'Listening Task') return 'Listen to an audio clip and answer questions.';
@@ -296,7 +294,6 @@
         if (taskName === 'Reading Aloud Task 1') return 'task1.html';
         if (taskName === 'Typing Task') return 'task2.html';
         if (taskName === 'Reading Comprehension') return 'task3.html';
-        if (taskName === 'Mathematical Comprehension') return 'task4.html';
         if (taskName === 'Writing Task') return 'task5.html';
         if (taskName === 'Aptitude Test') return 'aptitude.html';
         if (taskName === 'Listening Task') return 'task_listening.html';
