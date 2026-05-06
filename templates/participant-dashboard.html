@@ -133,6 +133,7 @@
         if (taskName === 'Writing Task') return "{{ url_for('static', filename='write.jpg') }}";
         if (taskName === 'Aptitude Test') return "{{ url_for('static', filename='aptitude.png') }}";
         if (taskName === 'Listening Task') return "{{ url_for('static', filename='listen.jpg') }}";
+        if (taskName === 'Visual Task') return "{{ url_for('static', filename='visual_task_1.jpg') }}";
         return "{{ url_for('static', filename='gauge.png') }}";
     }
 
@@ -187,6 +188,7 @@
         if (taskName === 'Writing Task') return 'Write a creative story or essay.';
         if (taskName === 'Aptitude Test') return 'Test your logical & verbal reasoning.';
         if (taskName === 'Listening Task') return 'Listen to an audio clip and answer questions.';
+        if (taskName === 'Visual Task') return 'Observe an image and answer questions about it.';
         return 'Complete this task to progress.';
     }
 
@@ -298,6 +300,7 @@
         if (taskName === 'Writing Task') return 'task5.html';
         if (taskName === 'Aptitude Test') return 'aptitude.html';
         if (taskName === 'Listening Task') return 'task_listening.html';
+        if (taskName === 'Visual Task') return 'task_visual.html';
 
         else {
             const safeName = taskName.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');

@@ -105,7 +105,6 @@
                 <li><strong>Numerical Ability:</strong> Work with numbers and mathematical concepts</li>
                 <li><strong>Verbal Ability:</strong> Understand and work with language</li>
                 <li><strong>Spatial Reasoning:</strong> Visualize and manipulate spatial relationships</li>
-                <li><strong>Visual Task:</strong> Observe an image and answer questions about it</li>
             </ul>
             <p class="text-sm sm:text-base md:text-lg"><strong>Time:</strong> Each section takes approximately 10-15
                 minutes</p>
@@ -139,9 +138,6 @@
                 <button
                     class="section-nav px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm md:text-base font-medium transition"
                     data-section="spatial"><span class="hidden sm:inline">Spatial </span>Reasoning</button>
-                <button
-                    class="section-nav px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm md:text-base font-medium transition"
-                    data-section="visual"><span class="hidden sm:inline">Visual </span>Task</button>
             </div>
         </div>
 
@@ -255,33 +251,6 @@
                 </div>
             </div>
         </div>
-
-
-        <!-- Visual Task Section -->
-        <div id="visualSection" class="question-container">
-            <div class="bg-white rounded-lg sm:rounded-xl shadow-md p-4 sm:p-6 md:p-8 mb-4 sm:mb-6 md:mb-8">
-                <h3 class="text-lg sm:text-xl md:text-2xl font-bold mb-4 sm:mb-5 md:mb-6 text-center text-gray-800">
-                    Visual Task</h3>
-                <div class="max-w-2xl mx-auto">
-                    <div class="media-container mb-6 text-center" style="display:none;">
-                        <img src="" alt="Visual Task Image" class="max-w-full h-auto rounded-lg mx-auto shadow-md max-h-80">
-                    </div>
-                    <div class="question mb-6 sm:mb-8">
-                        <p class="text-sm sm:text-base md:text-lg font-medium mb-3 sm:mb-4">1. Question 1</p>
-                        <div class="grid grid-cols-2 gap-2 sm:gap-3 md:gap-4"></div>
-                    </div>
-                    <div class="question mb-6 sm:mb-8">
-                        <p class="text-sm sm:text-base md:text-lg font-medium mb-3 sm:mb-4">2. Question 2</p>
-                        <div class="grid grid-cols-2 gap-2 sm:gap-3 md:gap-4"></div>
-                    </div>
-                    <div class="question mb-6 sm:mb-8">
-                        <p class="text-sm sm:text-base md:text-lg font-medium mb-3 sm:mb-4">3. Subjective Question</p>
-                        <textarea class="subjective-input w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition" rows="4" placeholder="Type your answer here..."></textarea>
-                    </div>
-                </div>
-            </div>
-        </div>
-
         <!-- Action Buttons -->
         <div class="bg-white rounded-lg sm:rounded-xl shadow-md p-4 sm:p-5 md:p-6">
             <div class="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 sm:gap-4">
@@ -364,8 +333,6 @@
         // Update spatial reasoning section
         updateQuestionSection('spatial', task.spatial_question, task.spatial_question_options);
 
-        // Update visual section
-        updateMediaSection('visual', task.visual_image_url, 'image', task.visual_q1, task.visual_q1_options, task.visual_q2, task.visual_q2_options, task.visual_q3);
     }
 
     function updateOptions(questionEl, options) {
@@ -564,10 +531,9 @@
         logical: {},
         numerical: {},
         verbal: {},
-        spatial: {},
-        visual: {}
+        spatial: {}
     };
-    let totalQuestions = 7; // 4 basic + 3 visual
+    let totalQuestions = 4;
     let answeredQuestions = 0;
 
     // DOM elements
@@ -687,7 +653,6 @@
             numerical_ability_score: 0,
             verbal_ability_score: 0,
             spatial_reasoning_score: 0,
-            visual_task_score: 0,
             total_score: 0
         };
 
@@ -774,27 +739,12 @@
             }
         }
         
-        const visualQ1 = answers.visual && answers.visual[0];
-        if (currentAptitudeTask.visual_q1) {
-            if (checkAnswer(visualQ1, currentAptitudeTask.visual_q1_answer, currentAptitudeTask.visual_q1_options)) {
-                scores.visual_task_score += 1;
-            }
-        }
-        
-        const visualQ2 = answers.visual && answers.visual[1];
-        if (currentAptitudeTask.visual_q2) {
-            if (checkAnswer(visualQ2, currentAptitudeTask.visual_q2_answer, currentAptitudeTask.visual_q2_options)) {
-                scores.visual_task_score += 1;
-            }
-        }
-        
-        scores.max_score = 6; // 4 base + 2 visual
+        scores.max_score = 4;
 
         scores.total_score = scores.logical_reasoning_score
             + scores.numerical_ability_score
             + scores.verbal_ability_score
-            + scores.spatial_reasoning_score
-            + scores.visual_task_score;
+            + scores.spatial_reasoning_score;
 
         return scores;
     }
@@ -940,8 +890,7 @@
                         logical: {},
                         numerical: {},
                         verbal: {},
-                        spatial: {},
-                        visual: {}
+                        spatial: {}
                     };
                     answeredQuestions = 0;
                     currentSection = 'logical';
@@ -1001,13 +950,18 @@
                             const savedAnswers = typeof saved.answers === 'string' ? JSON.parse(saved.answers) : saved.answers;
                             console.log('Parsed saved answers:', savedAnswers);
                             if (savedAnswers && typeof savedAnswers === 'object') {
-                                answers = savedAnswers;
+                                answers = {
+                                    logical: savedAnswers.logical || {},
+                                    numerical: savedAnswers.numerical || {},
+                                    verbal: savedAnswers.verbal || {},
+                                    spatial: savedAnswers.spatial || {}
+                                };
                                 console.log('Answers restored:', answers);
                             }
                         }
 
                         // Restore current section if available
-                        if (saved.current_section) {
+                        if (saved.current_section && ['logical', 'numerical', 'verbal', 'spatial'].includes(saved.current_section)) {
                             showSection(saved.current_section);
                             updateNavigation();
                         }
