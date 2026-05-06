@@ -1,12 +1,18 @@
 from flask import Flask, request, jsonify, session, flash, redirect, url_for, render_template, send_from_directory
 from flask_cors import CORS
 import mysql.connector
-from datetime import datetime
+from datetime import datetime, timedelta
 import io
 import json
 import uuid
 import bcrypt
 import os
+import smtplib
+import secrets
+import threading
+import time
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 from werkzeug.utils import secure_filename
 from authlib.integrations.flask_client import OAuth
 from pydub import AudioSegment, silence
@@ -27,6 +33,120 @@ if not os.getenv("RAILWAY_ENVIRONMENT"):
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "dyslexia_research_study_2025")
 CORS(app)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# OTP Store  (in-memory, thread-safe)
+# Structure: { email: { 'otp': str, 'expires_at': float, 'user_type': str } }
+# ─────────────────────────────────────────────────────────────────────────────
+_otp_store: dict = {}
+_otp_lock = threading.Lock()
+OTP_EXPIRY_SECONDS = int(os.getenv("OTP_EXPIRY_SECONDS", 300))   # 5 minutes default
+
+def _purge_expired_otps():
+    """Background task that removes expired OTP entries every 60 s."""
+    while True:
+        time.sleep(60)
+        now = time.time()
+        with _otp_lock:
+            expired = [k for k, v in _otp_store.items() if v['expires_at'] < now]
+            for k in expired:
+                del _otp_store[k]
+
+# Start purge daemon
+_purge_thread = threading.Thread(target=_purge_expired_otps, daemon=True)
+_purge_thread.start()
+
+
+def _send_otp_email(recipient_email: str, otp: str, user_type: str) -> bool:
+    """
+    Sends a 6-digit OTP to *recipient_email* via Gmail SMTP (TLS on port 587).
+    Returns True on success, False on failure.
+    """
+    sender_email = os.getenv("MAIL_SENDER_EMAIL", "")
+    sender_password = os.getenv("MAIL_SENDER_APP_PASSWORD", "")
+
+    if not sender_email or not sender_password:
+        print("[OTP] MAIL_SENDER_EMAIL or MAIL_SENDER_APP_PASSWORD not configured in .env")
+        return False
+
+    account_label = "School" if user_type == "school" else "Parent"
+
+    # ── HTML email body ───────────────────────────────────────────────────────
+    html_body = f"""
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Email Verification – Dyslexia Research Study</title>
+    </head>
+    <body style="margin:0;padding:0;background:#f4f6fb;font-family:'Segoe UI',Arial,sans-serif;">
+      <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f6fb;padding:40px 0;">
+        <tr><td align="center">
+          <table width="520" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:16px;box-shadow:0 4px 24px rgba(26,35,126,0.10);overflow:hidden;">
+            <!-- Header -->
+            <tr>
+              <td style="background:linear-gradient(135deg,#1A237E 0%,#283593 100%);padding:36px 40px 28px;text-align:center;">
+                <p style="margin:0 0 8px;font-size:13px;color:#90CAF9;letter-spacing:2px;text-transform:uppercase;">Dyslexia Research Initiative</p>
+                <h1 style="margin:0;font-size:26px;font-weight:700;color:#ffffff;">Verify Your Email</h1>
+              </td>
+            </tr>
+            <!-- Body -->
+            <tr>
+              <td style="padding:36px 40px 28px;">
+                <p style="margin:0 0 16px;font-size:15px;color:#37474f;">Hello,</p>
+                <p style="margin:0 0 24px;font-size:15px;color:#37474f;line-height:1.6;">
+                  You are creating a <strong>{account_label} account</strong> on the Dyslexia Research Study platform.
+                  Use the one-time passcode below to verify your email address.
+                </p>
+                <!-- OTP Box -->
+                <div style="background:#EEF2FF;border:2px dashed #3949AB;border-radius:12px;text-align:center;padding:28px 20px;margin:0 0 28px;">
+                  <p style="margin:0 0 8px;font-size:13px;color:#5C6BC0;letter-spacing:1px;text-transform:uppercase;font-weight:600;">Your One-Time Passcode</p>
+                  <p style="margin:0;font-size:48px;font-weight:800;letter-spacing:10px;color:#1A237E;font-family:'Courier New',monospace;">{otp}</p>
+                </div>
+                <p style="margin:0 0 8px;font-size:14px;color:#78909c;">
+                  ⏱ &nbsp;This code expires in <strong>{OTP_EXPIRY_SECONDS // 60} minutes</strong>.
+                </p>
+                <p style="margin:0 0 24px;font-size:14px;color:#78909c;">
+                  If you did not request this, please ignore this email.
+                </p>
+                <hr style="border:none;border-top:1px solid #ECEFF1;margin:0 0 24px;">
+                <p style="margin:0;font-size:13px;color:#b0bec5;text-align:center;">
+                  &copy; 2025 Leveraging NLP for Dyslexia Identification &nbsp;&bull;&nbsp; All rights reserved
+                </p>
+              </td>
+            </tr>
+          </table>
+        </td></tr>
+      </table>
+    </body>
+    </html>
+    """
+
+    plain_body = (
+        f"Your OTP for {account_label} account verification is: {otp}\n"
+        f"This code is valid for {OTP_EXPIRY_SECONDS // 60} minutes.\n"
+        "If you did not request this, please ignore this email."
+    )
+
+    msg = MIMEMultipart('alternative')
+    msg['Subject'] = f"✅ Your Verification Code – Dyslexia Research Study"
+    msg['From']    = f"Dyslexia Research Study <{sender_email}>"
+    msg['To']      = recipient_email
+    msg.attach(MIMEText(plain_body, 'plain'))
+    msg.attach(MIMEText(html_body,  'html'))
+
+    try:
+        with smtplib.SMTP('smtp.gmail.com', 587, timeout=15) as server:
+            server.ehlo()
+            server.starttls()
+            server.login(sender_email, sender_password)
+            server.sendmail(sender_email, recipient_email, msg.as_string())
+        print(f"[OTP] Email sent to {recipient_email}")
+        return True
+    except Exception as exc:
+        print(f"[OTP] Failed to send email to {recipient_email}: {exc}")
+        return False
 
 DB_CONFIG = {
     "host": os.getenv("MYSQLHOST", "localhost"),
@@ -498,6 +618,10 @@ def school_page():
 @app.route('/school-signup')
 def school_signup():
     return render_template('school_signup.html')
+
+@app.route('/parent-signup')
+def parent_signup():
+    return render_template('parent_signup.html')
     
 @app.route('/student-signin')
 def student_signin():
@@ -1113,23 +1237,180 @@ def logout():
     session.clear()
     return jsonify({'success': True, 'message': 'Logged out successfully'})
 
-@app.route('/api/parent/register', methods=['POST'])
-def parent_register():
-    """API endpoint to handle parent registration.
-    If a parent email exists without password, set password. If none exists, create a new parent.
-    Also claim any inactive children with pending_parent_email matching this parent and activate them.
+# ─────────────────────────────────────────────────────────────────────────────
+# OTP – page route
+# ─────────────────────────────────────────────────────────────────────────────
+@app.route('/verify-otp')
+def verify_otp_page():
+    """Renders the OTP verification page."""
+    user_type = request.args.get('user_type', 'parent')   # 'parent' or 'school'
+    email     = request.args.get('email', '')
+    if not email:
+        return redirect(url_for('landing'))
+    return render_template('verify_otp.html', user_type=user_type, email=email)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# OTP – send  (step 1)
+# ─────────────────────────────────────────────────────────────────────────────
+@app.route('/api/send-otp', methods=['POST'])
+def api_send_otp():
+    """
+    Generates a 6-digit OTP, stores it keyed by email, and emails it.
+    Body JSON: { "email": "...", "user_type": "parent" | "school" }
     """
     try:
         data = request.get_json()
         if not data:
             return jsonify({'success': False, 'message': 'No data received'}), 400
 
-        name = (data.get('name') or '').strip()
+        email     = (data.get('email') or '').strip().lower()
+        user_type = (data.get('user_type') or 'parent').strip().lower()
+
+        if not email:
+            return jsonify({'success': False, 'message': 'Email is required'}), 400
+        if user_type not in ('parent', 'school'):
+            return jsonify({'success': False, 'message': 'Invalid user_type'}), 400
+
+        # Rate-limit: if a *valid* (non-expired) OTP already exists, block re-send
+        # unless the client explicitly asks for a resend (handled separately below).
+        with _otp_lock:
+            existing = _otp_store.get(email)
+            if existing and existing['expires_at'] > time.time():
+                remaining = int(existing['expires_at'] - time.time())
+                # Allow resend only after at least 60 s
+                if remaining > (OTP_EXPIRY_SECONDS - 60):
+                    return jsonify({
+                        'success': False,
+                        'message': f'An OTP was already sent. Please wait {remaining - (OTP_EXPIRY_SECONDS - 60)} seconds before requesting a new one.',
+                        'retry_after': remaining - (OTP_EXPIRY_SECONDS - 60)
+                    }), 429
+
+        # Generate a secure 6-digit OTP
+        otp = str(secrets.randbelow(900000) + 100000)   # always 6 digits
+
+        with _otp_lock:
+            _otp_store[email] = {
+                'otp':       otp,
+                'expires_at': time.time() + OTP_EXPIRY_SECONDS,
+                'user_type': user_type,
+                'verified':  False
+            }
+
+        # Send email (do NOT block the request if email fails; surface error to user)
+        sent = _send_otp_email(email, otp, user_type)
+        if not sent:
+            with _otp_lock:
+                _otp_store.pop(email, None)
+            return jsonify({'success': False, 'message': 'Failed to send OTP email. Check server email configuration.'}), 500
+
+        return jsonify({
+            'success': True,
+            'message': f'OTP sent to {email}. It is valid for {OTP_EXPIRY_SECONDS // 60} minutes.',
+            'expiry_seconds': OTP_EXPIRY_SECONDS
+        })
+
+    except Exception as exc:
+        print(f"[send-otp] error: {exc}")
+        return jsonify({'success': False, 'message': 'Internal server error'}), 500
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# OTP – verify  (step 2)
+# ─────────────────────────────────────────────────────────────────────────────
+@app.route('/api/verify-otp', methods=['POST'])
+def api_verify_otp():
+    """
+    Validates the OTP entered by the user.
+    Body JSON: { "email": "...", "otp": "123456", "user_type": "parent" | "school" }
+    On success, sets session['otp_verified_email'] so the registration endpoint
+    can trust it without asking again.
+    """
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'success': False, 'message': 'No data received'}), 400
+
+        email     = (data.get('email') or '').strip().lower()
+        otp_input = (data.get('otp') or '').strip()
+        user_type = (data.get('user_type') or 'parent').strip().lower()
+
+        if not email or not otp_input:
+            return jsonify({'success': False, 'message': 'Email and OTP are required'}), 400
+
+        with _otp_lock:
+            record = _otp_store.get(email)
+
+        if not record:
+            return jsonify({'success': False, 'message': 'No OTP found for this email. Please request a new one.'}), 400
+
+        if time.time() > record['expires_at']:
+            with _otp_lock:
+                _otp_store.pop(email, None)
+            return jsonify({'success': False, 'message': 'OTP has expired. Please request a new one.'}), 400
+
+        if record['otp'] != otp_input:
+            return jsonify({'success': False, 'message': 'Incorrect OTP. Please try again.'}), 400
+
+        # Mark as verified in store and stamp session
+        with _otp_lock:
+            _otp_store[email]['verified'] = True
+
+        # Store verified state in server-side session
+        session['otp_verified_email']     = email
+        session['otp_verified_user_type'] = user_type
+
+        return jsonify({
+            'success':   True,
+            'message':   'Email verified successfully!',
+            'user_type': user_type
+        })
+
+    except Exception as exc:
+        print(f"[verify-otp] error: {exc}")
+        return jsonify({'success': False, 'message': 'Internal server error'}), 500
+
+
+@app.route('/api/parent/register', methods=['POST'])
+def parent_register():
+    """API endpoint to handle parent registration.
+    Requires prior OTP verification (session['otp_verified_email'] must match the
+    submitted email).  If a parent email exists without password, set password.
+    If none exists, create a new parent.
+    Also claim any inactive children with pending_parent_email matching this parent.
+    """
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'success': False, 'message': 'No data received'}), 400
+
+        name  = (data.get('name') or '').strip()
         email = (data.get('email') or '').strip().lower()
         password = data.get('password') or ''
 
         if not name or not email or not password:
             return jsonify({'success': False, 'message': 'All fields are required'}), 400
+
+        # ── OTP gate ─────────────────────────────────────────────────────────
+        verified_email     = session.get('otp_verified_email', '').lower()
+        verified_user_type = session.get('otp_verified_user_type', '')
+        if verified_email != email or verified_user_type != 'parent':
+            return jsonify({
+                'success': False,
+                'message': 'Email not verified. Please complete OTP verification first.',
+                'requires_otp': True
+            }), 403
+        # Also cross-check in-memory store to ensure the OTP hasn't been invalidated
+        with _otp_lock:
+            record = _otp_store.get(email)
+        if not record or not record.get('verified'):
+            session.pop('otp_verified_email', None)
+            session.pop('otp_verified_user_type', None)
+            return jsonify({
+                'success': False,
+                'message': 'Email verification expired or invalid. Please verify again.',
+                'requires_otp': True
+            }), 403
 
         conn, cur = get_db_cursor()
         if not conn:
@@ -1175,6 +1456,12 @@ def parent_register():
         session['user_id'] = user_id
         session['email'] = email
         session['user_type'] = 'parent'
+
+        # Clean up OTP state after successful registration
+        session.pop('otp_verified_email', None)
+        session.pop('otp_verified_user_type', None)
+        with _otp_lock:
+            _otp_store.pop(email, None)
 
         return jsonify({'success': True, 'message': 'Parent registration successful!', 'user_id': user_id}), 201
 
@@ -1397,7 +1684,27 @@ def school_register():
         # Check if school already exists
         if check_school_exists(email):
             return jsonify({'success': False, 'message': 'School with this email already exists'}), 409
-        
+
+        # ── OTP gate ─────────────────────────────────────────────────────────
+        verified_email     = session.get('otp_verified_email', '').lower()
+        verified_user_type = session.get('otp_verified_user_type', '')
+        if verified_email != email or verified_user_type != 'school':
+            return jsonify({
+                'success': False,
+                'message': 'Email not verified. Please complete OTP verification first.',
+                'requires_otp': True
+            }), 403
+        with _otp_lock:
+            record = _otp_store.get(email)
+        if not record or not record.get('verified'):
+            session.pop('otp_verified_email', None)
+            session.pop('otp_verified_user_type', None)
+            return jsonify({
+                'success': False,
+                'message': 'Email verification expired or invalid. Please verify again.',
+                'requires_otp': True
+            }), 403
+
         # Hash the password
         password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
         
@@ -1409,6 +1716,12 @@ def school_register():
                 session['school_id'] = school_id
                 session['email'] = email
                 session['user_type'] = 'school'
+
+            # Clean up OTP state
+            session.pop('otp_verified_email', None)
+            session.pop('otp_verified_user_type', None)
+            with _otp_lock:
+                _otp_store.pop(email, None)
             
             return jsonify({
                 'success': True, 

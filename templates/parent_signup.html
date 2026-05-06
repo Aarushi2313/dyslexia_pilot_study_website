@@ -319,58 +319,71 @@
             eyeSlashIconConfirm.classList.toggle('hidden');
         });
 
-        document.getElementById('parentSignupForm').addEventListener('submit', function (e) {
+        document.getElementById('parentSignupForm').addEventListener('submit', async function (e) {
             e.preventDefault();
 
             const formData = new FormData(this);
+            const name     = (formData.get('name') || '').trim();
+            const email    = (formData.get('email') || '').trim().toLowerCase();
             const password = formData.get('password');
             const confirmPassword = formData.get('confirmPassword');
 
-            // Validate password
+            // Validate fields
+            if (!name || !email || !password) {
+                alert('Please fill in all required fields.');
+                return;
+            }
             if (password.length < 8) {
-                alert('Password must be at least 8 characters long');
+                alert('Password must be at least 8 characters long.');
                 return;
             }
-
-            // Validate password confirmation
             if (password !== confirmPassword) {
-                alert('Passwords do not match');
+                alert('Passwords do not match.');
                 return;
             }
-
-            // Validate terms and consent
             if (!formData.get('terms') || !formData.get('consent')) {
-                alert('Please agree to the terms and consent to participate');
+                alert('Please agree to the terms and consent to participate.');
                 return;
             }
 
-            const data = {
-                name: formData.get('name'),
-                email: formData.get('email'),
-                password: password
-            };
+            const submitBtn = this.querySelector('button[type="submit"]');
+            const originalText = submitBtn.textContent;
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Sending verification code…';
 
-            // Submit form
-            fetch('/api/parent/register', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(data)
-            })
-                .then(res => res.json())
-                .then(data => {
-                    if (data.success) {
-                        // alert('Parent account created successfully! You will be redirected to the parent dashboard.');
-                        window.location.href = '/parent';
-                    } else {
-                        alert('Error: ' + data.message);
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('An error occurred while creating your account.');
+            try {
+                // Step 1: Send OTP to the email
+                const otpRes  = await fetch('/api/send-otp', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: email, user_type: 'parent' })
                 });
+                const otpData = await otpRes.json();
+
+                if (!otpData.success) {
+                    alert('Error: ' + otpData.message);
+                    submitBtn.disabled  = false;
+                    submitBtn.textContent = originalText;
+                    return;
+                }
+
+                // Step 2: Save registration payload to sessionStorage so
+                //         verify_otp.html can finish registration after OTP check.
+                sessionStorage.setItem('pendingRegistration', JSON.stringify({
+                    name:     name,
+                    email:    email,
+                    password: password
+                }));
+
+                // Step 3: Redirect to OTP verification page
+                window.location.href = `/verify-otp?user_type=parent&email=${encodeURIComponent(email)}`;
+
+            } catch (err) {
+                console.error('OTP send error:', err);
+                alert('A network error occurred. Please try again.');
+                submitBtn.disabled    = false;
+                submitBtn.textContent = originalText;
+            }
         });
     </script>
 </body>

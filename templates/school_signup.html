@@ -344,12 +344,16 @@
         }
 
         // Form submission handler
-        document.getElementById('schoolSignupForm').addEventListener('submit', function (e) {
+        document.getElementById('schoolSignupForm').addEventListener('submit', async function (e) {
             e.preventDefault();
 
             const formData = new FormData(this);
+            const name     = (formData.get('name') || '').trim();
+            const email    = (formData.get('email') || '').trim().toLowerCase();
             const password = formData.get('password');
             const confirmPassword = formData.get('confirmPassword');
+            const address  = (formData.get('address') || '').trim();
+            const phone    = (formData.get('phone') || '').trim();
 
             // Validate password
             if (password.length < 8) {
@@ -369,35 +373,47 @@
                 return;
             }
 
-            const data = {
-                name: formData.get('name'),
-                email: formData.get('email'),
-                password: password,
-                address: formData.get('address'),
-                phone: formData.get('phone')
-            };
+            const submitBtn = this.querySelector('button[type="submit"]');
+            const originalText = submitBtn.textContent;
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Sending verification code…';
 
-            // Submit form
-            fetch('/api/school/register', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(data)
-            })
-                .then(res => res.json())
-                .then(data => {
-                    if (data.success) {
-                        // alert('School account created successfully! You will be redirected to the school dashboard.');
-                        window.location.href = '/school.html';
-                    } else {
-                        alert('Error: ' + data.message);
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('An error occurred while creating your account.');
+            try {
+                // Step 1: Send OTP to the school email
+                const otpRes  = await fetch('/api/send-otp', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: email, user_type: 'school' })
                 });
+                const otpData = await otpRes.json();
+
+                if (!otpData.success) {
+                    alert('Error: ' + otpData.message);
+                    submitBtn.disabled    = false;
+                    submitBtn.textContent = originalText;
+                    return;
+                }
+
+                // Step 2: Persist the full registration payload in sessionStorage.
+                //         verify_otp.html will POST this to /api/school/register
+                //         only after the OTP passes.
+                sessionStorage.setItem('pendingRegistration', JSON.stringify({
+                    name:     name,
+                    email:    email,
+                    password: password,
+                    address:  address,
+                    phone:    phone
+                }));
+
+                // Step 3: Go to verification page
+                window.location.href = `/verify-otp?user_type=school&email=${encodeURIComponent(email)}`;
+
+            } catch (err) {
+                console.error('OTP send error:', err);
+                alert('A network error occurred. Please try again.');
+                submitBtn.disabled    = false;
+                submitBtn.textContent = originalText;
+            }
         });
     </script>
 </body>
