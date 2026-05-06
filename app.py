@@ -172,6 +172,147 @@ def ensure_suggested_tasks_table():
         except Exception:
             pass
 
+def ensure_listening_progress_table():
+    """Create or upgrade listening_progress so it matches other progress tables."""
+    conn = connect_db()
+    if not conn:
+        return
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS listening_progress (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                attempt_id INT NOT NULL,
+                q1 TEXT,
+                q2 VARCHAR(255) DEFAULT NULL,
+                q3 TEXT,
+                status ENUM('In Progress','Completed') DEFAULT 'In Progress',
+                updated_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                score INT DEFAULT 0,
+                max_score INT DEFAULT 2,
+                UNIQUE KEY uq_listening_attempt (attempt_id),
+                CONSTRAINT listening_progress_ibfk_1
+                    FOREIGN KEY (attempt_id) REFERENCES user_task_attempts(id) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+            """
+        )
+        cursor.execute("SHOW COLUMNS FROM listening_progress")
+        existing_columns = {row[0] for row in cursor.fetchall()}
+        if 'updated_at' not in existing_columns:
+            cursor.execute(
+                "ALTER TABLE listening_progress "
+                "ADD COLUMN updated_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP "
+                "ON UPDATE CURRENT_TIMESTAMP"
+            )
+        if 'score' not in existing_columns:
+            cursor.execute("ALTER TABLE listening_progress ADD COLUMN score INT DEFAULT 0")
+        if 'max_score' not in existing_columns:
+            cursor.execute("ALTER TABLE listening_progress ADD COLUMN max_score INT DEFAULT 2")
+        if 'status' in existing_columns:
+            cursor.execute(
+                "ALTER TABLE listening_progress "
+                "MODIFY COLUMN status ENUM('In Progress','Completed') DEFAULT 'In Progress'"
+            )
+        cursor.execute("SHOW INDEX FROM listening_progress WHERE Key_name = 'uq_listening_attempt'")
+        if not cursor.fetchone():
+            cursor.execute("ALTER TABLE listening_progress ADD UNIQUE KEY uq_listening_attempt (attempt_id)")
+        conn.commit()
+    except Exception as e:
+        print(f"Error ensuring listening_progress table: {e}")
+    finally:
+        try:
+            cursor.close()
+            conn.close()
+        except Exception:
+            pass
+
+def ensure_listening_tasks_table():
+    """Create listening_tasks if it doesn't exist."""
+    conn = connect_db()
+    if not conn:
+        return
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS listening_tasks (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                task_name VARCHAR(255) NOT NULL,
+                class_level INT NOT NULL,
+                difficulty_level ENUM('Easy','Medium','Hard') NOT NULL,
+                audio_url VARCHAR(500) DEFAULT NULL,
+                question1 TEXT NOT NULL,
+                question2 TEXT NOT NULL,
+                question3 TEXT NOT NULL,
+                answer1_options JSON DEFAULT NULL,
+                answer2_options JSON DEFAULT NULL,
+                answer3_type ENUM('text','multiple_choice') DEFAULT 'text',
+                answer1 TEXT DEFAULT NULL,
+                answer2 TEXT DEFAULT NULL,
+                instructions TEXT,
+                estimated_time INT DEFAULT 5,
+                created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+                CONSTRAINT listening_tasks_chk_1 CHECK (class_level BETWEEN 1 AND 12)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+            """
+        )
+        conn.commit()
+    except Exception as e:
+        print(f"Error ensuring listening_tasks table: {e}")
+    finally:
+        try:
+            cursor.close()
+            conn.close()
+        except Exception:
+            pass
+
+def normalize_answer(value):
+    return str(value).strip().lower() if value is not None else ''
+
+def parse_json_options(value):
+    try:
+        if isinstance(value, str):
+            return json.loads(value) or []
+        return value or []
+    except Exception:
+        return []
+
+def is_mcq_answer_correct(selected, expected, options=None):
+    selected_normalized = normalize_answer(selected)
+    expected_normalized = normalize_answer(expected)
+    if not selected_normalized or not expected_normalized:
+        return False
+    if selected_normalized == expected_normalized:
+        return True
+    parsed_options = parse_json_options(options)
+    if len(expected_normalized) == 1 and 'a' <= expected_normalized <= 'z' and parsed_options:
+        option_index = ord(expected_normalized) - ord('a')
+        if 0 <= option_index < len(parsed_options):
+            return selected_normalized == normalize_answer(parsed_options[option_index])
+    return False
+
+def resolve_listening_audio_url(task):
+    """Resolve listening task audio URL with DB value first and class-based static fallback."""
+    audio_url = task.get('audio_url') or task.get('listening_audio_url')
+    if audio_url:
+        audio_url = str(audio_url).strip()
+        if audio_url.startswith('/static/'):
+            return audio_url
+        if '/' not in audio_url:
+            return f"/static/audio_tasks/{audio_url}"
+        return f"/static/{audio_url.lstrip('/')}"
+
+    class_level = task.get('class_level')
+    if class_level:
+        import glob
+        audio_dir = os.path.join(app.static_folder, 'audio_tasks')
+        if os.path.exists(audio_dir):
+            matches = glob.glob(os.path.join(audio_dir, f'class{class_level}_audio.*'))
+            if matches:
+                return f"/static/audio_tasks/{os.path.basename(matches[0])}"
+    return None
+
 def connect_db():
     """Establishes a connection to the MySQL database."""
     try:
@@ -256,6 +397,9 @@ def calculate_reading_accuracy(ground_truth, transcribed_text):
 
 # Ensure suggested_tasks table exists after DB connector is defined
 ensure_suggested_tasks_table()
+ensure_video_recordings_table()
+ensure_listening_progress_table()
+ensure_listening_tasks_table()
 
 UPLOAD_FOLDER = '/mnt/LS226/aditya_dyslexia_data/uploads'
 ALLOWED_EXTENSIONS = {'wav', 'webm', 'mp3', 'ogg', 'm4a', 'jpg', 'jpeg', 'png', 'gif', 'bmp', 'tiff', 'webp'}
@@ -2422,7 +2566,8 @@ def participant_dashboard():
                 'Reading Comprehension',
                 'Mathematical Comprehension',
                 'Writing Task',
-                'Aptitude Test'
+                'Aptitude Test',
+                'Listening Task'
             ]
             
             # Determine allowed tasks based on class level from demographics
@@ -2441,12 +2586,20 @@ def participant_dashboard():
                     ('Reading Comprehension', 'reading_comprehension_tasks'),
                     ('Mathematical Comprehension', 'mathematical_comprehension_tasks'),
                     ('Writing Task', 'writing_tasks'),
-                    ('Aptitude Test', 'aptitude_tasks')
+                    ('Aptitude Test', 'aptitude_tasks'),
+                    ('Listening Task', 'listening_tasks')
                 ]
                 
                 for task_name, table_name in task_categories:
                     # Check if there are class-appropriate tasks for this category
-                    cursor.execute(f"SELECT COUNT(*) as count FROM {table_name} WHERE class_level = %s", (class_level,))
+                    if task_name == 'Listening Task':
+                        cursor.execute(
+                            f"SELECT COUNT(*) as count FROM {table_name} "
+                            "WHERE class_level = %s AND question1 IS NOT NULL AND question1 != ''",
+                            (class_level,)
+                        )
+                    else:
+                        cursor.execute(f"SELECT COUNT(*) as count FROM {table_name} WHERE class_level = %s", (class_level,))
                     count_result = cursor.fetchone()
                     if count_result and count_result['count'] > 0:
                         db_tasks.append(task_name)
@@ -3359,12 +3512,20 @@ def api_allowed_tasks():
                 ('Reading Comprehension', 'reading_comprehension_tasks'),
                 ('Mathematical Comprehension', 'mathematical_comprehension_tasks'),
                 ('Writing Task', 'writing_tasks'),
-                ('Aptitude Test', 'aptitude_tasks')
+                ('Aptitude Test', 'aptitude_tasks'),
+                ('Listening Task', 'listening_tasks')
             ]
             
             for task_name, table_name in task_categories:
                 # Check if there are class-appropriate tasks for this category
-                cursor.execute(f"SELECT COUNT(*) as count FROM {table_name} WHERE class_level = %s", (class_level,))
+                if task_name == 'Listening Task':
+                    cursor.execute(
+                        f"SELECT COUNT(*) as count FROM {table_name} "
+                        "WHERE class_level = %s AND question1 IS NOT NULL AND question1 != ''",
+                        (class_level,)
+                    )
+                else:
+                    cursor.execute(f"SELECT COUNT(*) as count FROM {table_name} WHERE class_level = %s", (class_level,))
                 count_result = cursor.fetchone()
                 if count_result and count_result['count'] > 0:
                     allowed.append(task_name)
@@ -4544,7 +4705,8 @@ def submit_comprehension():
         
         # Get correct answers directly using task_id
         cursor.execute("""
-            SELECT answer1, answer2 FROM reading_comprehension_tasks 
+            SELECT answer1, answer2, answer1_options, answer2_options
+            FROM reading_comprehension_tasks 
             WHERE id = %s
         """, (reading_task_id,))
         
@@ -4555,19 +4717,21 @@ def submit_comprehension():
         
         correct_answer1 = task_row[0]
         correct_answer2 = task_row[1]
+        answer1_options = task_row[2]
+        answer2_options = task_row[3]
         
         print(f"Reading Comprehension - User answers: q1='{q1}', q2='{q2}'")
         print(f"Reading Comprehension - Correct answers: answer1='{correct_answer1}', answer2='{correct_answer2}'")
         
         # Check q1 answer (text input or multiple choice)
-        if q1 and q1.strip().lower() == correct_answer1.lower():
+        if is_mcq_answer_correct(q1, correct_answer1, answer1_options):
             score += 1
             print(f"Reading Comprehension - Q1 correct!")
         else:
             print(f"Reading Comprehension - Q1 incorrect")
         
         # Check q2 answer (multiple choice)
-        if q2 and q2.strip().lower() == correct_answer2.lower():
+        if is_mcq_answer_correct(q2, correct_answer2, answer2_options):
             score += 1
             print(f"Reading Comprehension - Q2 correct!")
         else:
@@ -6042,6 +6206,485 @@ def start_aptitude_task():
         print(f"Start aptitude task error: {e}")
         return jsonify({'success': False, 'message': 'Failed to start task'}), 500
 
+# ─────────────────────────────────────────────────────────────────────────────
+# LISTENING TASK ROUTES
+# ─────────────────────────────────────────────────────────────────────────────
+
+@app.route('/task_listening.html')
+def task_listening():
+    """Serves the Listening Task selector page"""
+    if 'user_id' not in session:
+        return redirect(url_for('signin'))
+    return render_template('task_listening.html', user_id=session['user_id'])
+
+@app.route('/task_listening_exec.html')
+def task_listening_exec():
+    """Serves the Listening Task execution page"""
+    if 'user_id' not in session:
+        return redirect(url_for('signin'))
+    return render_template('task_listening_exec.html', user_id=session['user_id'])
+
+
+@app.route('/api/listening-tasks/<int:user_id>', methods=['GET'])
+def get_listening_tasks(user_id):
+    """Get class-appropriate listening tasks for a user."""
+    try:
+        conn = connect_db()
+        if not conn:
+            return jsonify({'success': False, 'message': 'Database connection failed'}), 500
+
+        cursor = conn.cursor(dictionary=True)
+
+        # Verify user exists
+        cursor.execute("SELECT id FROM users WHERE id = %s", (user_id,))
+        if not cursor.fetchone():
+            return jsonify({'success': False, 'message': 'User not found'}), 404
+
+        # Get class level
+        class_level = _get_user_class_level(conn, user_id)
+
+        # Check if listening_tasks table exists
+        cursor.execute("SHOW TABLES LIKE 'listening_tasks'")
+        if not cursor.fetchone():
+            cursor.close(); conn.close()
+            return jsonify({'success': False, 'message': 'Listening tasks not configured. Please contact administrator.'}), 500
+
+        # Fetch class-appropriate listening tasks
+        if class_level:
+            cursor.execute(
+                """
+                SELECT id, task_name, instructions, estimated_time, class_level, difficulty_level,
+                       audio_url, question1, question2, question3,
+                       answer1_options, answer2_options, answer1, answer2, answer3_type
+                FROM listening_tasks
+                WHERE class_level = %s AND question1 IS NOT NULL AND question1 != ''
+                ORDER BY difficulty_level, class_level, id
+                """,
+                (class_level,)
+            )
+        else:
+            # No class level - return all with listening content
+            cursor.execute(
+                """
+                SELECT id, task_name, instructions, estimated_time, class_level, difficulty_level,
+                       audio_url, question1, question2, question3,
+                       answer1_options, answer2_options, answer1, answer2, answer3_type
+                FROM listening_tasks
+                WHERE question1 IS NOT NULL AND question1 != ''
+                ORDER BY difficulty_level, class_level, id
+                """
+            )
+
+        tasks = cursor.fetchall()
+
+        for task in tasks:
+            task['audio_url'] = resolve_listening_audio_url(task)
+
+        cursor.close(); conn.close()
+
+        if not tasks:
+            return jsonify({'success': False, 'message': f'No listening tasks found for your class. Please contact administrator.'}), 404
+
+        return jsonify({
+            'success': True,
+            'tasks': tasks,
+            'class_level': class_level or 'Not specified',
+            'total_tasks': len(tasks)
+        })
+
+    except Exception as e:
+        print(f"Get listening tasks error: {e}")
+        import traceback; traceback.print_exc()
+        return jsonify({'success': False, 'message': f'Failed to fetch listening tasks: {str(e)}'}), 500
+
+
+@app.route('/api/listening-task/<int:task_id>', methods=['GET'])
+def get_listening_task_by_id(task_id):
+    """Get a specific listening task by its listening_tasks ID."""
+    try:
+        conn = connect_db()
+        if not conn:
+            return jsonify({'success': False, 'message': 'Database connection failed'}), 500
+
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute(
+            """
+            SELECT id, task_name, instructions, estimated_time, class_level, difficulty_level,
+                   audio_url, question1, question2, question3,
+                   answer1_options, answer2_options, answer1, answer2, answer3_type
+            FROM listening_tasks
+            WHERE id = %s
+            """,
+            (task_id,)
+        )
+        task = cursor.fetchone()
+        cursor.close(); conn.close()
+
+        if not task:
+            return jsonify({'success': False, 'message': 'Listening task not found'}), 404
+
+        task['audio_url'] = resolve_listening_audio_url(task)
+
+        return jsonify({'success': True, 'task': task})
+
+    except Exception as e:
+        print(f"Get listening task by ID error: {e}")
+        return jsonify({'success': False, 'message': f'Failed to fetch listening task: {str(e)}'}), 500
+
+
+@app.route('/api/start-listening-task', methods=['POST'])
+def start_listening_task():
+    """Mark the Listening Task as In Progress"""
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'message': 'User not logged in'}), 401
+
+    data = request.get_json()
+    task_name = data.get('task_name', 'Listening Task')
+
+    try:
+        conn = connect_db()
+        cursor = conn.cursor()
+        cursor.execute("SELECT id FROM tasks WHERE task_name = %s", ('Listening Task',))
+        task_row = cursor.fetchone()
+        if not task_row:
+            return jsonify({'success': False, 'message': 'Listening Task not found in tasks table'}), 404
+        generic_task_id = task_row[0]
+
+        cursor.execute("""
+            SELECT id, attempt_number FROM user_task_attempts
+            WHERE user_id = %s AND task_id = %s AND status = 'In Progress'
+            ORDER BY attempt_number DESC LIMIT 1
+        """, (session['user_id'], generic_task_id))
+        attempt_row = cursor.fetchone()
+        if attempt_row:
+            attempt_id = attempt_row[0]
+            attempt_number = attempt_row[1]
+        else:
+            cursor.execute("""
+                SELECT COALESCE(MAX(attempt_number), 0) + 1
+                FROM user_task_attempts
+                WHERE user_id = %s AND task_id = %s
+            """, (session['user_id'], generic_task_id))
+            attempt_number = cursor.fetchone()[0]
+            cursor.execute("""
+                INSERT INTO user_task_attempts (user_id, task_id, attempt_number, status, started_at)
+                VALUES (%s, %s, %s, 'In Progress', NOW())
+            """, (session['user_id'], generic_task_id, attempt_number))
+            attempt_id = cursor.lastrowid
+
+        cursor.execute(
+            '''INSERT INTO user_tasks (user_id, task_name, status)
+               VALUES (%s, %s, %s)
+               ON DUPLICATE KEY UPDATE status = IF(status='Completed', status, VALUES(status)),
+                                       updated_at = CURRENT_TIMESTAMP''',
+            (session['user_id'], task_name, 'In Progress')
+        )
+        conn.commit()
+        cursor.close(); conn.close()
+        return jsonify({
+            'success': True,
+            'message': 'Task started successfully',
+            'attempt_id': attempt_id,
+            'attempt_number': attempt_number
+        })
+    except Exception as e:
+        print(f"Start listening task error: {e}")
+        return jsonify({'success': False, 'message': 'Failed to start task'}), 500
+
+
+@app.route('/api/save-listening-progress', methods=['POST'])
+def save_listening_progress():
+    """Save in-progress answers for the Listening Task"""
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'message': 'User not logged in'}), 401
+
+    data = request.get_json()
+    q1 = data.get('q1', '')
+    q2 = data.get('q2', '')
+    q3 = data.get('q3', '')
+    task_name = data.get('task_name', 'Listening Task')
+
+    try:
+        conn = connect_db()
+        cursor = conn.cursor()
+
+        # Get task_id from tasks table
+        cursor.execute("SELECT id FROM tasks WHERE task_name = %s", (task_name,))
+        task_row = cursor.fetchone()
+        if not task_row:
+            # Task may not be in tasks table yet — still save to user_tasks
+            cursor.execute(
+                '''INSERT INTO user_tasks (user_id, task_name, status)
+                   VALUES (%s, %s, 'In Progress')
+                   ON DUPLICATE KEY UPDATE status = IF(status='Completed', status, 'In Progress'),
+                                           updated_at = CURRENT_TIMESTAMP''',
+                (session['user_id'], task_name)
+            )
+            conn.commit()
+            cursor.close(); conn.close()
+            return jsonify({'success': True, 'message': 'Progress noted (task not in tasks table yet)'})
+
+        task_db_id = task_row[0]
+
+        # Get or create an In Progress attempt
+        cursor.execute(
+            """SELECT id FROM user_task_attempts
+               WHERE user_id = %s AND task_id = %s AND status = 'In Progress'
+               ORDER BY attempt_number DESC LIMIT 1""",
+            (session['user_id'], task_db_id)
+        )
+        attempt_row = cursor.fetchone()
+        if attempt_row:
+            attempt_id = attempt_row[0]
+        else:
+            cursor.execute(
+                """SELECT COALESCE(MAX(attempt_number), 0) + 1 FROM user_task_attempts
+                   WHERE user_id = %s AND task_id = %s""",
+                (session['user_id'], task_db_id)
+            )
+            attempt_number = cursor.fetchone()[0]
+            cursor.execute(
+                """INSERT INTO user_task_attempts (user_id, task_id, attempt_number, status, started_at)
+                   VALUES (%s, %s, %s, 'In Progress', NOW())""",
+                (session['user_id'], task_db_id, attempt_number)
+            )
+            attempt_id = cursor.lastrowid
+
+        # Upsert into listening_progress table using the shared attempt-based model
+        cursor.execute(
+            """INSERT INTO listening_progress (attempt_id, q1, q2, q3, status, updated_at)
+               VALUES (%s, %s, %s, %s, 'In Progress', NOW())
+               ON DUPLICATE KEY UPDATE q1=VALUES(q1), q2=VALUES(q2), q3=VALUES(q3),
+                                       status='In Progress', updated_at=NOW()""",
+            (attempt_id, q1, q2, q3)
+        )
+
+        # Update user_tasks
+        cursor.execute(
+            '''INSERT INTO user_tasks (user_id, task_name, status)
+               VALUES (%s, %s, 'In Progress')
+               ON DUPLICATE KEY UPDATE status = IF(status='Completed', status, 'In Progress'),
+                                       updated_at = CURRENT_TIMESTAMP''',
+            (session['user_id'], task_name)
+        )
+
+        conn.commit()
+        cursor.close(); conn.close()
+        return jsonify({'success': True, 'message': 'Progress saved successfully', 'attempt_id': attempt_id})
+
+    except Exception as e:
+        print(f"Save listening progress error: {e}")
+        import traceback; traceback.print_exc()
+        return jsonify({'success': False, 'message': f'Failed to save progress: {str(e)}'}), 500
+
+
+@app.route('/api/get-listening-progress', methods=['GET'])
+def get_listening_progress():
+    """Retrieve saved listening progress for the current user"""
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'message': 'User not logged in'}), 401
+
+    task_name = request.args.get('task_name', 'Listening Task')
+
+    try:
+        conn = connect_db()
+        cursor = conn.cursor(dictionary=True)
+
+        cursor.execute("SELECT id FROM tasks WHERE task_name = %s", (task_name,))
+        task_row = cursor.fetchone()
+        if not task_row:
+            return jsonify({'success': False, 'message': 'Task not found'}), 404
+        task_id = task_row['id']
+
+        cursor.execute(
+            """SELECT
+                   uta.id AS attempt_id,
+                   uta.attempt_number,
+                   uta.status AS attempt_status,
+                   uta.started_at,
+                   uta.completed_at,
+                   lp.q1, lp.q2, lp.q3, lp.status AS progress_status, lp.updated_at
+               FROM user_task_attempts uta
+               LEFT JOIN listening_progress lp ON lp.attempt_id = uta.id
+               WHERE uta.user_id = %s AND uta.task_id = %s AND uta.status = 'In Progress'
+               ORDER BY lp.updated_at DESC, uta.started_at DESC
+               LIMIT 1""",
+            (session['user_id'], task_id)
+        )
+        progress = cursor.fetchone()
+        cursor.close(); conn.close()
+
+        if progress:
+            return jsonify({
+                'success': True,
+                'progress': {
+                    'q1': progress.get('q1', ''),
+                    'q2': progress.get('q2', ''),
+                    'q3': progress.get('q3', ''),
+                    'status': progress.get('progress_status', 'In Progress'),
+                    'attempt_id': progress.get('attempt_id'),
+                    'attempt_number': progress.get('attempt_number'),
+                    'attempt_status': progress.get('attempt_status'),
+                    'started_at': progress.get('started_at'),
+                    'completed_at': progress.get('completed_at')
+                }
+            })
+        return jsonify({'success': True, 'progress': None})
+
+    except Exception as e:
+        print(f"Get listening progress error: {e}")
+        return jsonify({'success': False, 'message': f'Failed to get progress: {str(e)}'}), 500
+
+
+@app.route('/api/submit-listening', methods=['POST'])
+def submit_listening():
+    """Submit the Listening Task answers and score them"""
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'message': 'User not logged in'}), 401
+
+    data = request.get_json()
+    q1 = data.get('q1', '')
+    q2 = data.get('q2', '')
+    q3 = data.get('q3', '')
+    task_id = data.get('task_id')  # listening_tasks row ID
+    task_name = data.get('task_name', 'Listening Task')
+
+    try:
+        conn = connect_db()
+        cursor = conn.cursor(dictionary=True)
+
+        # Score Q1 and Q2 against correct answers
+        score = 0
+        max_score = 2
+        if task_id:
+            cursor.execute(
+                "SELECT answer1, answer1_options, answer2, answer2_options FROM listening_tasks WHERE id = %s",
+                (task_id,)
+            )
+            task_row = cursor.fetchone()
+            if task_row:
+                if is_mcq_answer_correct(q1, task_row.get('answer1'), task_row.get('answer1_options')):
+                    score += 1
+                if is_mcq_answer_correct(q2, task_row.get('answer2'), task_row.get('answer2_options')):
+                    score += 1
+
+        # Get tasks table ID for 'Listening Task'
+        cursor.execute("SELECT id FROM tasks WHERE task_name = 'Listening Task'")
+        tasks_row = cursor.fetchone()
+
+        if tasks_row:
+            task_db_id = tasks_row['id']
+            cursor.execute(
+                """SELECT id, attempt_number FROM user_task_attempts
+                   WHERE user_id = %s AND task_id = %s AND status = 'In Progress'
+                   ORDER BY attempt_number DESC LIMIT 1""",
+                (session['user_id'], task_db_id)
+            )
+            attempt_row = cursor.fetchone()
+            if attempt_row:
+                attempt_id = attempt_row['id']
+                attempt_number = attempt_row['attempt_number']
+            else:
+                cursor.execute(
+                    "SELECT COALESCE(MAX(attempt_number), 0) + 1 as next_attempt FROM user_task_attempts WHERE user_id = %s AND task_id = %s",
+                    (session['user_id'], task_db_id)
+                )
+                next_attempt = (cursor.fetchone() or {}).get('next_attempt', 1)
+                cursor.execute(
+                    "INSERT INTO user_task_attempts (user_id, task_id, attempt_number, status, started_at) VALUES (%s, %s, %s, 'In Progress', NOW())",
+                    (session['user_id'], task_db_id, next_attempt)
+                )
+                attempt_id = cursor.lastrowid
+                attempt_number = next_attempt
+
+            # Mark attempt complete
+            cursor.execute(
+                "UPDATE user_task_attempts SET status='Completed', completed_at=NOW() WHERE id=%s",
+                (attempt_id,)
+            )
+
+            # Upsert to listening_progress
+            cursor.execute(
+                """INSERT INTO listening_progress (attempt_id, q1, q2, q3, score, max_score, status, updated_at)
+                   VALUES (%s, %s, %s, %s, %s, %s, 'Completed', NOW())
+                   ON DUPLICATE KEY UPDATE q1=VALUES(q1), q2=VALUES(q2), q3=VALUES(q3),
+                                           score=VALUES(score), max_score=VALUES(max_score),
+                                           status='Completed', updated_at=NOW()""",
+                (attempt_id, q1, q2, q3, score, max_score)
+            )
+
+        # Mark user_tasks as Completed
+        cursor.execute(
+            '''INSERT INTO user_tasks (user_id, task_name, status)
+               VALUES (%s, %s, 'Completed')
+               ON DUPLICATE KEY UPDATE status='Completed', updated_at=CURRENT_TIMESTAMP''',
+            (session['user_id'], task_name)
+        )
+
+        conn.commit()
+        cursor.close(); conn.close()
+
+        return jsonify({
+            'success': True,
+            'message': 'Listening task submitted successfully',
+            'score': score,
+            'max_score': max_score,
+            'attempt_number': attempt_number if tasks_row else None
+        })
+
+    except Exception as e:
+        print(f"Submit listening error: {e}")
+        import traceback; traceback.print_exc()
+        return jsonify({'success': False, 'message': f'Failed to submit: {str(e)}'}), 500
+
+
+@app.route('/api/retake-listening', methods=['POST'])
+def retake_listening():
+    """Create a new attempt for the Listening Task retake"""
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'message': 'User not logged in'}), 401
+
+    data = request.get_json()
+    task_name = data.get('task_name', 'Listening Task')
+
+    try:
+        conn = connect_db()
+        cursor = conn.cursor()
+
+        cursor.execute("SELECT id FROM tasks WHERE task_name = %s", (task_name,))
+        task_row = cursor.fetchone()
+        if task_row:
+            task_db_id = task_row[0]
+            cursor.execute(
+                "SELECT COALESCE(MAX(attempt_number), 0) + 1 FROM user_task_attempts WHERE user_id = %s AND task_id = %s",
+                (session['user_id'], task_db_id)
+            )
+            attempt_number = cursor.fetchone()[0]
+            cursor.execute(
+                "INSERT INTO user_task_attempts (user_id, task_id, attempt_number, status, started_at) VALUES (%s, %s, %s, 'In Progress', NOW())",
+                (session['user_id'], task_db_id, attempt_number)
+            )
+
+        # Reset user_tasks to In Progress
+        cursor.execute(
+            '''INSERT INTO user_tasks (user_id, task_name, status)
+               VALUES (%s, %s, 'In Progress')
+               ON DUPLICATE KEY UPDATE status='In Progress', updated_at=CURRENT_TIMESTAMP''',
+            (session['user_id'], task_name)
+        )
+
+        conn.commit()
+        cursor.close(); conn.close()
+        return jsonify({'success': True, 'message': 'New attempt created. Previous submissions preserved.'})
+
+    except Exception as e:
+        print(f"Retake listening error: {e}")
+        return jsonify({'success': False, 'message': f'Error: {str(e)}'}), 500
+
+# ─────────────────────────────────────────────────────────────────────────────
+# END LISTENING TASK ROUTES
+# ─────────────────────────────────────────────────────────────────────────────
+
 @app.route('/api/upload-writing', methods=['POST'])
 def upload_writing():
     """Upload writing sample image"""
@@ -6369,7 +7012,7 @@ def admin_users_list():
         ''')
         users = cursor.fetchall()
         # Define the set of all tasks
-        all_tasks = ['Reading Aloud Task 1', 'Typing Task', 'Reading Comprehension', 'Mathematical Comprehension','Writing Task','Aptitude Test']
+        all_tasks = ['Reading Aloud Task 1', 'Typing Task', 'Reading Comprehension', 'Mathematical Comprehension', 'Writing Task', 'Aptitude Test', 'Listening Task']
         total_tasks = len(all_tasks)
         for user in users:
             # Get completed tasks for this user (only those in all_tasks)
@@ -6531,7 +7174,7 @@ def admin_users_grouped():
         schools = cursor.fetchall()
 
         # Compute progress for parents and children
-        all_tasks = ['Reading Aloud Task 1', 'Typing Task', 'Reading Comprehension', 'Mathematical Comprehension','Writing Task','Aptitude Test']
+        all_tasks = ['Reading Aloud Task 1', 'Typing Task', 'Reading Comprehension', 'Mathematical Comprehension', 'Writing Task', 'Aptitude Test', 'Listening Task']
         total_tasks = len(all_tasks)
         def attach_progress(users):
             for u in users:
@@ -6558,7 +7201,7 @@ def admin_users_grouped():
             ''', (s['id'],))
             s['num_children'] = cursor.fetchone()['c']
 
-            core_tasks = ['Reading Aloud Task 1', 'Typing Task', 'Reading Comprehension', 'Mathematical Comprehension', 'Writing Task', 'Aptitude Test']
+            core_tasks = ['Reading Aloud Task 1', 'Typing Task', 'Reading Comprehension', 'Mathematical Comprehension', 'Writing Task', 'Aptitude Test', 'Listening Task']
             cursor.execute('''
                 SELECT u.id
                 FROM users u
@@ -8060,7 +8703,7 @@ def get_student_scores(user_id):
         class_level = _get_user_class_level(conn, user_id)
         
         stats = {
-            'progress': {'completed': 0, 'total': 6, 'percentage': 0},
+            'progress': {'completed': 0, 'total': 7, 'percentage': 0},
             'time_spent': {},
             'class_averages': {},
             'personal_bests': {},
@@ -8069,7 +8712,8 @@ def get_student_scores(user_id):
             'scores': {
                 'reading_comprehension': {'score': 0, 'max_score': 2, 'attempts': 0, 'latest_score': 0},
                 'mathematical_comprehension': {'score': 0, 'max_score': 3, 'attempts': 0, 'latest_score': 0},
-                'aptitude': {'score': 0, 'max_score': 8, 'attempts': 0, 'latest_score': 0}
+                'aptitude': {'score': 0, 'max_score': 8, 'attempts': 0, 'latest_score': 0},
+                'listening': {'score': 0, 'max_score': 2, 'attempts': 0, 'latest_score': 0}
             },
             'reading_stats': None
         }
@@ -8158,8 +8802,21 @@ def get_student_scores(user_id):
                 JOIN users u ON uta.user_id = u.id
                 JOIN demographics d ON u.id = d.user_id
                 WHERE uta.status = 'Completed' AND d.education_level = %s
+
+                UNION ALL
+
+                SELECT
+                    'Listening Task' as task_name,
+                    AVG(lp.score) as avg_score,
+                    MAX(lp.max_score) as max_score,
+                    COUNT(DISTINCT uta.user_id) as student_count
+                FROM user_task_attempts uta
+                JOIN listening_progress lp ON lp.attempt_id = uta.id
+                JOIN users u ON uta.user_id = u.id
+                JOIN demographics d ON u.id = d.user_id
+                WHERE uta.status = 'Completed' AND d.education_level = %s
             """
-            cursor.execute(class_avg_query, (class_level, class_level, class_level))
+            cursor.execute(class_avg_query, (class_level, class_level, class_level, class_level))
             class_results = cursor.fetchall()
             for result in class_results:
                 stats['class_averages'][result['task_name']] = {
@@ -8277,8 +8934,35 @@ def get_student_scores(user_id):
             FROM user_task_attempts uta
             JOIN aptitude_progress ap ON ap.attempt_id = uta.id
             WHERE uta.user_id = %s AND uta.status = 'Completed'
+
+            UNION ALL
+
+            SELECT
+                'Listening Task' as task_name,
+                MAX(lp.score) as best_score,
+                MAX(lp.max_score) as max_score,
+                COUNT(*) as attempts,
+                (SELECT lp2.score FROM listening_progress lp2
+                 JOIN user_task_attempts uta2 ON lp2.attempt_id = uta2.id
+                 WHERE uta2.user_id = %s AND uta2.status = 'Completed'
+                 ORDER BY uta2.completed_at DESC LIMIT 1) as latest_score,
+                (SELECT lp3.score FROM listening_progress lp3
+                 JOIN user_task_attempts uta3 ON lp3.attempt_id = uta3.id
+                 WHERE uta3.user_id = %s AND uta3.status = 'Completed'
+                 ORDER BY uta3.completed_at ASC LIMIT 1) as first_score
+            FROM user_task_attempts uta
+            JOIN listening_progress lp ON lp.attempt_id = uta.id
+            WHERE uta.user_id = %s AND uta.status = 'Completed'
         """
-        cursor.execute(personal_best_query, (user_id, user_id, user_id, user_id, user_id, user_id, user_id, user_id, user_id))
+        cursor.execute(
+            personal_best_query,
+            (
+                user_id, user_id, user_id,
+                user_id, user_id, user_id,
+                user_id, user_id, user_id,
+                user_id, user_id, user_id
+            )
+        )
         personal_results = cursor.fetchall()
         
         max_improvement = 0
@@ -8314,7 +8998,7 @@ def get_student_scores(user_id):
             badges.append({'name': 'First Steps', 'icon': '🎯', 'description': 'Completed your first task'})
         if completed_tasks >= 3:
             badges.append({'name': 'Getting Started', 'icon': '🚀', 'description': 'Completed 3 tasks'})
-        if completed_tasks >= 6:
+        if completed_tasks >= 7:
             badges.append({'name': 'Task Master', 'icon': '🏆', 'description': 'Completed all tasks'})
         
         # Performance badges
@@ -8387,6 +9071,23 @@ def get_student_scores(user_id):
             stats['scores']['aptitude']['max_score'] = aptitude_scores[0]['max_score']
             total_score = sum(score['total_score'] for score in aptitude_scores)
             stats['scores']['aptitude']['score'] = round(total_score / len(aptitude_scores), 2)
+
+        # Listening scores
+        cursor.execute("""
+            SELECT lp.score, lp.max_score, lp.updated_at
+            FROM listening_progress lp
+            JOIN user_task_attempts uta ON lp.attempt_id = uta.id
+            WHERE uta.user_id = %s AND lp.status = 'Completed'
+            ORDER BY lp.updated_at DESC
+        """, (user_id,))
+
+        listening_scores = cursor.fetchall()
+        if listening_scores:
+            stats['scores']['listening']['attempts'] = len(listening_scores)
+            stats['scores']['listening']['latest_score'] = listening_scores[0]['score']
+            stats['scores']['listening']['max_score'] = listening_scores[0]['max_score']
+            total_score = sum(score['score'] for score in listening_scores)
+            stats['scores']['listening']['score'] = round(total_score / len(listening_scores), 2)
         
         cursor.close()
         conn.close()
@@ -8441,7 +9142,7 @@ def check_new_badges():
                 session['badge_getting_started'] = True
                 print("Badge: Getting Started earned")
         
-        if completed_tasks >= 6:
+        if completed_tasks >= 7:
             if not session.get('badge_task_master', False):
                 new_badges.append({'name': 'Task Master', 'icon': '🏆', 'description': 'Completed all tasks'})
                 session['badge_task_master'] = True
@@ -8451,7 +9152,8 @@ def check_new_badges():
         task_configs = [
             ('Reading Comprehension', 'comprehension_progress', 'score', 'max_score'),
             ('Mathematical Comprehension', 'mathematical_comprehension_progress', 'score', 'max_score'),
-            ('Aptitude Test', 'aptitude_progress', 'total_score', 'max_score')
+            ('Aptitude Test', 'aptitude_progress', 'total_score', 'max_score'),
+            ('Listening Task', 'listening_progress', 'score', 'max_score')
         ]
         
         for task_name, table_name, score_col, max_score_col in task_configs:
